@@ -30,6 +30,8 @@ apps/web/          Vite + React web client (@ten-ten/web)
 packages/core/     Pure TS game engine (@ten-ten/core) — no DOM/React/platform code
 packages/tokens/   Design tokens + themes (@ten-ten/tokens) — platform-agnostic; type-only imports from core
 biome.json         Lint + format config
+wrangler.jsonc     Cloudflare Workers static-assets config (serves apps/web/dist)
+.github/workflows/ CI: runs `pnpm check` on push to main and PRs
 .fallowrc.json     Fallow static analysis config (strict rules + architecture boundaries)
 tsconfig.base.json Shared strict TS config; each package extends it
 ```
@@ -77,6 +79,9 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 - `src/feedback/`: `board-effects.ts` (place/clear animations via cell attributes), `sound.ts`
   (Web Audio synth), `haptics.ts`, `use-feedback.ts` (orchestrates per move; sound setting).
 - `src/storage.ts`: the only place that touches localStorage.
+- Deploys: pushing to `main` deploys to https://tenten.ryanharman.dev via Cloudflare
+  Workers Builds. Cache/security headers live in `public/_headers` — keep entry
+  points (`sw.js`, `index.html`, manifest) `no-cache` or updates get stuck.
 - PWA: configured in `vite.config.ts` (`VitePWA`); the service worker is only
   built for production — test offline with `pnpm build` + `pnpm --filter @ten-ten/web preview`.
   Updates are applied on new game via `src/app-update.ts`; don't add auto-reload.

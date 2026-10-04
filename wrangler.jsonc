@@ -1,0 +1,11 @@
+// Cloudflare Workers static assets: serves the web app build. No Worker code.
+// Deployed by Cloudflare Workers Builds on push to main
+// (build: `pnpm build`, deploy: `npx wrangler deploy`).
+{
+  "name": "ten-ten",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./apps/web/dist",
+    "not_found_handling": "single-page-application"
+  }
+}
