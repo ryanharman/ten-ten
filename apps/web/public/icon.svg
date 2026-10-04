@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>ten-ten</title>
+  <rect width="512" height="512" rx="96" fill="#1C2028"/>
+  <g transform="translate(76 76)">
+    <rect x="0" y="0" width="112" height="112" rx="20" fill="#8F82F0"/>
+    <rect x="0" y="124" width="112" height="112" rx="20" fill="#8F82F0"/>
+    <rect x="0" y="248" width="112" height="112" rx="20" fill="#8F82F0"/>
+    <rect x="124" y="248" width="112" height="112" rx="20" fill="#8F82F0"/>
+    <rect x="248" y="248" width="112" height="112" rx="20" fill="#8F82F0"/>
+    <rect x="124" y="0" width="112" height="112" rx="20" fill="#F5C142"/>
+    <rect x="248" y="0" width="112" height="112" rx="20" fill="#F5C142"/>
+    <rect x="124" y="124" width="112" height="112" rx="20" fill="#F06C8B"/>
+    <rect x="248" y="124" width="112" height="112" rx="20" fill="#262B35"/>
+  </g>
+</svg>

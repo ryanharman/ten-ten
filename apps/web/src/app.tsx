@@ -1,8 +1,10 @@
 import { useCallback, useRef } from "react";
 import styles from "./app.module.css";
+import { applyPendingUpdate } from "./app-update";
 import { BoardView } from "./components/board-view";
 import { GameOver } from "./components/game-over";
 import { PieceView } from "./components/piece-view";
+import { RotatePrompt } from "./components/rotate-prompt";
 import { SoundToggle } from "./components/sound-toggle";
 import { Tray } from "./components/tray";
 import { cssVars } from "./css-vars";
@@ -36,6 +38,8 @@ export function App() {
   });
 
   const handleRestart = () => {
+    // A new version is waiting: starting a new game is a safe moment to load it.
+    if (applyPendingUpdate()) return;
     cancelDrag();
     resetEffects();
     restart();
@@ -92,6 +96,7 @@ export function App() {
           onRestart={handleRestart}
         />
       )}
+      <RotatePrompt />
     </main>
   );
 }

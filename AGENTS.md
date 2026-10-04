@@ -17,7 +17,7 @@ Guidance for AI agents (and humans) working in this repo.
 
 ## Project status
 
-Steps 1–3, 4a and 4b done — playable web game with animations, sound, haptics and high score. Next: 4c (PWA/offline, portrait, icons).
+Steps 1–4 done — installable, offline-capable web game with animations, sound, haptics and high score. Next: step 5 (measure performance, set budgets).
 See `docs/project-brief.md` §8 for the roadmap.
 
 ## Repo layout
@@ -52,6 +52,8 @@ global `pnpm` is older, use `npx pnpm@12.9.1 <cmd>`.
 | `pnpm check` | typecheck → lint → test → fallow — must pass before committing |
 
 Adding deps: `pnpm --filter @ten-ten/<pkg> add <dep>` (add `-D` for dev deps).
+pnpm enforces a minimum release age, so brand-new versions may resolve to the
+previous release — check peer ranges match (`pnpm peers check`).
 Never add runtime dependencies to `packages/core` without logging a decision in the brief.
 
 ## Game engine (`packages/core`) quick reference
@@ -70,6 +72,11 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 - `src/feedback/`: `boardEffects` (place/clear animations via cell attributes), `sound`
   (Web Audio synth), `haptics`, `useFeedback` (orchestrates per move; sound setting).
 - `src/storage.ts`: the only place that touches localStorage.
+- PWA: configured in `vite.config.ts` (`VitePWA`); the service worker is only
+  built for production — test offline with `pnpm build` + `pnpm --filter @ten-ten/web preview`.
+  Updates are applied on new game via `src/app-update.ts`; don't add auto-reload.
+- Icons: edit `public/icon.svg`, then `pnpm --filter @ten-ten/web icons` and commit the PNGs.
+- App name placeholder: `APP_NAME` in `vite.config.ts` plus `index.html` title tags.
 - `src/components/`: `BoardView` (memoised; children = 100 cells in row-major
   order — the preview relies on this), `Tray`, `PieceView` (sized by `--pitch`), `GameOver`.
 - Styles are CSS Modules using token variables only.

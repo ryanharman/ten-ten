@@ -172,6 +172,20 @@ Key principles:
   (Android only; iOS Safari has none — native haptics come with RN).
 - **Persistence:** `src/storage.ts` wraps localStorage (namespaced `ten-ten:`,
   failure-tolerant). Stores best score and sound setting.
+- **PWA (`vite-plugin-pwa`, Workbox `generateSW`):** installable
+  (`display: standalone`, `orientation: portrait`), whole app precached for
+  offline play. Manifest colours come from tokens; `theme-color` metas for
+  light/dark are injected by the tokens Vite plugin. Updates use
+  `registerType: "prompt"` with no prompt UI: a waiting version is applied when
+  the player starts a new game (`src/app-update.ts`), never mid-game. Service
+  workers only run on HTTPS (or localhost) — relevant when hosting.
+- **Portrait:** enforced by the manifest when installed; in a browser tab,
+  phones in landscape (`max-height: 500px`) see a rotate prompt. Tablets in
+  landscape still play.
+- **Name & icons are placeholders.** The display name is `APP_NAME` in
+  `apps/web/vite.config.ts` (+ `<title>`/apple title in `index.html`). Icons
+  are generated from `apps/web/public/icon.svg` with `pnpm --filter
+  @ten-ten/web icons`; generated PNGs are committed.
 - **Touch feel:** on touch, the dragged piece floats 1.5 cells above the finger
   (`TOUCH_LIFT_CELLS`); with a mouse it centres on the cursor. Tray pieces that
   can't fit anywhere are dimmed.
@@ -239,11 +253,11 @@ Tooling as configured:
 | 1 | Tooling & workspace: pnpm workspace, TS base config, Biome, Fallow, Vitest, `pnpm check` | Done |
 | 2 | `packages/core`: board (bitboard/typed array), piece set, seeded RNG, deal/fit/place/clear/game-over, pluggable scoring, tests | Done |
 | 3 | `packages/tokens`: design tokens + light/dark themes, emitted as CSS custom properties | Done |
-| 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | In progress — 4a, 4b done |
+| 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | Done |
 | 4a | Responsive board + tray, pointer drag with lift, drop preview incl. line-clear highlight, scoring display, game over + restart | Done |
 | 4b | Feedback: placement/clear animations, invalid-drop return animation, sound, haptics, local high score; drag robustness | Done |
-| 4c | PWA (offline, installable), portrait lock, theme-color meta, icons | Next |
-| 5 | Measure: bundle + drag perf on low-end device; set concrete budgets | — |
+| 4c | PWA (offline, installable), portrait lock, theme-color meta, icons | Done |
+| 5 | Measure: bundle + drag perf on low-end device; set concrete budgets | Next |
 
 ## 9. Open questions
 
@@ -254,7 +268,7 @@ Tooling as configured:
 | Q3 | Web E2E testing (Playwright?) — Vitest chosen for unit tests | Open |
 | Q4 | Hosting (likely subdomain of owner's personal domain) | Deferred |
 | Q5 | Concrete performance budgets (bundle size, frame time) | Set after scaffolding + first measurement |
-| Q6 | Final name | Open |
+| Q6 | Final name (placeholder "ten-ten" + block icon in use) | Open |
 | Q7 | User-selectable themes, colour-blind palettes | Deferred (post-POC) |
 
 ## 10. Decision log
@@ -290,3 +304,6 @@ Tooling as configured:
 | 2026-10-04 | Effects via data attributes + CSS keyframes; return-to-tray via WAAPI; reduced-motion respected | No React renders for effects; GPU-friendly transforms |
 | 2026-10-04 | Synthesized Web Audio sounds; Vibration API haptics | Zero asset weight; works offline |
 | 2026-10-04 | localStorage for best score + sound setting (namespaced, try/catch) | Local-only persistence per POC scope |
+| 2026-10-04 | PWA via vite-plugin-pwa 1.3 (2.0 blocked by pnpm minimum release age); updates applied on new game | Offline + installable; never interrupt a game |
+| 2026-10-04 | Portrait: manifest orientation + rotate prompt for landscape phones only | Browsers can't lock orientation in a tab; tablets fit in landscape |
+| 2026-10-04 | Placeholder name "ten-ten" and block-art icon | Rename deferred (Q6) |

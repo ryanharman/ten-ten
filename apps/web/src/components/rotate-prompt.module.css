@@ -1,0 +1,32 @@
+.prompt {
+  display: none;
+}
+
+/* Phones in landscape: too short to play. Tablets in landscape still fit. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .prompt {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-overlay);
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: var(--space-4);
+    background: var(--color-bg);
+    color: var(--color-text-muted);
+  }
+}
+
+.icon {
+  width: var(--space-7);
+  height: var(--space-7);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.text {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
