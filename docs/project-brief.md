@@ -288,12 +288,26 @@ Tooling as configured:
 | Q1 | Scoring model — placeholder `classicScoring` in place; streak available for combo bonuses | TBD |
 | Q2 | Piece distribution / weighting — currently uniform (weight 1 each) | Open — tune via playtesting |
 | Q3 | Web E2E test suite — Playwright now a dev dep (used by `pnpm perf`); no E2E tests yet | Open |
-| Q4 | Hosting (likely subdomain of owner's personal domain) | Deferred |
+| Q4 | Hosting | Resolved — Cloudflare Workers static assets at `tenten.ryanharman.dev` (§10) |
 | Q5 | Concrete performance budgets | Resolved — see §6b |
 | Q6 | Final name (placeholder "ten-ten" + block icon in use) | Open |
 | Q7 | User-selectable themes, colour-blind palettes | Deferred (post-POC) |
 
-## 10. Decision log
+## 10. Delivery
+
+- **CI:** GitHub Actions (`.github/workflows/ci.yml`) runs `pnpm check` on
+  pushes to `main` and on pull requests.
+- **Hosting:** Cloudflare Workers static assets (`wrangler.jsonc`, no Worker
+  code), deployed by Cloudflare Workers Builds on push to `main`
+  (build `pnpm build`, deploy `npx wrangler deploy`, env `NODE_VERSION=22`,
+  `PNPM_VERSION=12.9.1`). Custom domain `tenten.ryanharman.dev` (DNS on
+  Cloudflare). SPA fallback via `not_found_handling`.
+- **Caching:** `apps/web/public/_headers` — entry points (`/`, `index.html`,
+  `sw.js`, `registerSW.js`, manifest) are `no-cache` so updates reach players;
+  hashed `/assets/*` are immutable for a year. Plus basic security headers.
+- **Showcase:** a projects entry on the owner's site (ryanharman.dev).
+
+## 11. Decision log
 
 | Date | Decision | Rationale |
 |---|---|---|
@@ -333,3 +347,5 @@ Tooling as configured:
 | 2026-10-04 | Create AudioContext during idle; resume on gesture | Removed a 120–250 ms first-touch stall |
 | 2026-10-04 | Playwright added as web dev dependency (perf harness) | Real-browser measurement; foundation for future E2E |
 | 2026-10-04 | Kebab-case file names, enforced by Biome; history rewritten to apply it | Owner's convention |
+| 2026-10-04 | CI on GitHub Actions running `pnpm check` | Checks can't be skipped |
+| 2026-10-04 | Host on Cloudflare Workers static assets at tenten.ryanharman.dev, deployed via Workers Builds | DNS already on Cloudflare; HTTPS for PWA; control over cache headers |
