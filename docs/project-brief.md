@@ -94,17 +94,34 @@ Design requirements for the loop (implemented in `packages/core`):
   2×2 and 3×3 squares, small and large L/corner shapes in all orientations.
   Distribution/weighting TBD (tuning item).
 
-## 5. Theming & design system (intent)
+## 5. Theming & design system
 
-- All visual values (colours, spacing, radii, typography, motion durations,
-  piece palette) come from **design tokens**, never hard-coded.
-- Tokens are defined once in a platform-agnostic package (plain TS/JSON) and
-  consumed by web (CSS custom properties) and, later, native.
-- Themes = token overrides (at minimum light + dark; more selectable themes later).
-- Piece colours are part of the theme, not the game rules (rules reference a
-  piece *colour slot*, the theme maps slot → colour).
-- Accessibility to consider: colour-blind safe palettes, sufficient contrast,
-  reduced-motion support.
+Implemented in `packages/tokens` (platform-agnostic TS, no runtime deps).
+
+- **Foundation tokens** (`foundation.ts`, theme-independent): spacing scale,
+  radii, font families/sizes/weights, line heights, durations, easings,
+  opacities, board gap ratio. Values are **unitless numbers** (px / ms) so React
+  Native can use them directly; the CSS serializer adds units. Easings are
+  cubic-bézier tuples, valid for CSS and RN `Easing.bezier`.
+- **Themes** (`themes.ts`): semantic colours (`bg`, `surface`, `text`,
+  `textMuted`, `accent`, `boardBg`, `cellEmpty`, `cellClearHint`, `danger`) plus
+  a **piece palette keyed by the engine's `ColourSlot`** (1–9) — the engine says
+  *which* slot, the theme says *what colour*. Colours are **`#RRGGBB` hex only**
+  (RN does not support `oklch()` etc.).
+- **Accessibility enforced by tests:** text ≥ 4.5:1 on bg/surface (WCAG AA),
+  every piece ≥ 3:1 against empty cells (WCAG non-text contrast).
+- **Web delivery:** a Vite plugin serves `virtual:tokens.css`, generated at build
+  time by `buildThemeCss()` — zero runtime cost (~1 KB gzip).
+  - `:root` = light theme + foundation tokens
+  - `@media (prefers-color-scheme: dark)` → dark theme (follows the OS)
+  - `<html data-theme="name">` forces a theme (for us now, user choice later)
+- **Consuming tokens on web:** CSS uses `var(--…)`; TS/inline styles use
+  `colourVar("cellEmpty")` / `pieceColourVar(slot)`. Never hard-code colours,
+  sizes or durations.
+- **Adding a theme:** create a `Theme` object in `themes.ts`, pass it as
+  `extra` to `buildThemeCss` in `apps/web/vite.config.ts`; contrast tests apply
+  automatically once it's added to the `describe.each` list.
+- Later: user-selectable themes, colour-blind-safe palette (Q7).
 
 ## 6. Architecture
 
@@ -114,7 +131,7 @@ apps/
   (mobile/)       # future React Native app; short-term option is a WebView shell around apps/web
 packages/
   core/           # pure TS game engine: board, pieces, rules, scoring, RNG. Zero runtime deps.
-  tokens/         # design tokens + theme definitions (platform-agnostic TS)
+  tokens/         # design tokens + themes (platform-agnostic TS); may type-import core
 tooling / config at root: biome.json, fallow config, tsconfig base, pnpm-workspace.yaml
 ```
 
@@ -183,8 +200,8 @@ Tooling as configured:
 |---|---|---|
 | 1 | Tooling & workspace: pnpm workspace, TS base config, Biome, Fallow, Vitest, `pnpm check` | Done |
 | 2 | `packages/core`: board (bitboard/typed array), piece set, seeded RNG, deal/fit/place/clear/game-over, pluggable scoring, tests | Done |
-| 3 | `packages/tokens`: design tokens + light/dark themes, emitted as CSS custom properties | Next |
-| 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | — |
+| 3 | `packages/tokens`: design tokens + light/dark themes, emitted as CSS custom properties | Done |
+| 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | Next |
 | 5 | Measure: bundle + drag perf on low-end device; set concrete budgets | — |
 
 ## 9. Open questions
@@ -219,3 +236,8 @@ Tooling as configured:
 | 2026-10-04 | Engine API: pure `placePiece` returning `{ state, event }`; rules (deck, tray size, scoring) passed as data | Determinism, replayability, tunable without code changes |
 | 2026-10-04 | Placeholder scoring: 1/cell + triangular line bonus; tray of 3; uniform piece weights | Classic feel until scoring is designed |
 | 2026-10-04 | Benchmarks via Vitest 5 `bench` in `*.bench.ts` (not part of `pnpm check`) | Track hot-path performance without slowing the check loop |
+| 2026-10-04 | Tokens: unitless numeric values, hex colours, cubic-bézier tuples | Portable to React Native without conversion |
+| 2026-10-04 | Theme piece palette keyed by engine `ColourSlot`; tokens may only type-import core | Engine owns slots, theme owns colours; enforced by Fallow boundaries |
+| 2026-10-04 | Theme CSS generated at build time via Vite virtual module; light default, dark via OS preference, `data-theme` override | Zero runtime cost; follows system dark mode |
+| 2026-10-04 | WCAG contrast thresholds enforced in token tests | Accessibility regressions fail CI |
+| 2026-10-04 | Vite & Vitest in `apps/web` run with `--configLoader runner` (experimental) | Lets `vite.config.ts` import workspace TS source (extensionless imports). Fallback if it breaks: explicit `.ts` import extensions in packages |

@@ -184,6 +184,9 @@ importers:
       '@ten-ten/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@ten-ten/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -211,6 +214,19 @@ importers:
         version: 5.0.3(vite@8.3.2)
 
   packages/core:
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(vite@8.3.2)
+
+  packages/tokens:
+    dependencies:
+      '@ten-ten/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       typescript:
         specifier: ^7.0.2

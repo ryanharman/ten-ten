@@ -18,12 +18,33 @@
   },
   "boundaries": {
     "zones": [
-      { "name": "core", "patterns": ["packages/core/**"] },
-      { "name": "web", "patterns": ["apps/web/**"] }
+      {
+        "name": "core",
+        "patterns": ["packages/core/**"]
+      },
+      {
+        "name": "tokens",
+        "patterns": ["packages/tokens/**"]
+      },
+      {
+        "name": "web",
+        "patterns": ["apps/web/**"]
+      }
     ],
     "rules": [
-      { "from": "core", "allow": [] },
-      { "from": "web", "allow": ["core"] }
+      {
+        "from": "core",
+        "allow": []
+      },
+      {
+        "from": "tokens",
+        "allow": [],
+        "allowTypeOnly": ["core"]
+      },
+      {
+        "from": "web",
+        "allow": ["core", "tokens"]
+      }
     ]
   }
 }

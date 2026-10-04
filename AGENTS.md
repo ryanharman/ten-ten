@@ -17,7 +17,7 @@ Guidance for AI agents (and humans) working in this repo.
 
 ## Project status
 
-Steps 1 (tooling) and 2 (game engine) done. Next: step 3 — design tokens in `packages/tokens`.
+Steps 1–3 done (tooling, game engine, design tokens). Next: step 4 — the playable web game in `apps/web`.
 See `docs/project-brief.md` §8 for the roadmap.
 
 ## Repo layout
@@ -25,6 +25,7 @@ See `docs/project-brief.md` §8 for the roadmap.
 ```
 apps/web/          Vite + React web client (@ten-ten/web)
 packages/core/     Pure TS game engine (@ten-ten/core) — no DOM/React/platform code
+packages/tokens/   Design tokens + themes (@ten-ten/tokens) — platform-agnostic; type-only imports from core
 biome.json         Lint + format config
 .fallowrc.json     Fallow static analysis config (strict rules + architecture boundaries)
 tsconfig.base.json Shared strict TS config; each package extends it
@@ -69,8 +70,13 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 - Biome is the only linter/formatter.
 - `packages/core` must stay pure: no DOM, React, React Native or platform imports.
   Enforced by: `lib` without DOM in its tsconfig, and Fallow boundary zones
-  (`core` may import nothing; `web` may import `core`).
-- No hard-coded visual values — use design tokens.
+  (`core` → nothing; `tokens` → `core` type-only; `web` → `core`, `tokens`).
+- No hard-coded visual values — use design tokens. CSS: `var(--color-…)`,
+  `var(--space-N)`, etc. TS: `colourVar()` / `pieceColourVar()` from `@ten-ten/tokens`.
+  Theme colours must be `#RRGGBB` (RN-compatible). See brief §5.
+- The web app's theme CSS comes from the `virtual:tokens.css` Vite plugin in
+  `apps/web/vite.config.ts`; Vite and Vitest scripts in `apps/web` use `--configLoader runner` so the
+  config can import workspace TS source — keep that flag.
 - Performance is a core requirement: avoid allocations and re-renders in drag /
   game-loop hot paths; measure before and after optimising.
 
