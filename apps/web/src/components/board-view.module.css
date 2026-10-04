@@ -14,6 +14,7 @@
 }
 
 .cell {
+  position: relative;
   background: var(--cell-colour, var(--color-cell-empty));
   border-radius: var(--radius-cell);
 }
@@ -27,4 +28,47 @@
 .cell[data-clear] {
   background: var(--preview-colour);
   opacity: 1;
+}
+
+/* Move effects, toggled imperatively by feedback/board-effects.ts. */
+.cell[data-placed] {
+  animation: place var(--duration-fast) var(--ease-out);
+}
+
+/* The cleared block is a pseudo-element so the empty cell shows beneath it. */
+.cell[data-clearing]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--clearing-colour);
+  animation: clear var(--duration-slow) var(--ease-in) var(--clear-delay, 0ms)
+    both;
+}
+
+@keyframes place {
+  from {
+    transform: scale(0.82);
+  }
+}
+
+@keyframes clear {
+  30% {
+    transform: scale(1.12);
+    filter: brightness(1.35);
+  }
+  to {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell[data-placed] {
+    animation: none;
+  }
+
+  .cell[data-clearing]::after {
+    display: none;
+  }
 }

@@ -1,4 +1,5 @@
 import type { ColourSlot } from "@ten-ten/core";
+import type { CubicBezier } from "./foundation";
 import { foundation } from "./foundation";
 import type { Theme, ThemeColours } from "./themes";
 
@@ -17,6 +18,11 @@ export function pieceColourVar(slot: ColourSlot): string {
   return `var(--color-piece-${slot})`;
 }
 
+/** CSS `cubic-bezier()` for an easing token, e.g. for the Web Animations API. */
+export function cubicBezier([x1, y1, x2, y2]: CubicBezier): string {
+  return `cubic-bezier(${x1}, ${y1}, ${x2}, ${y2})`;
+}
+
 function groupVariables(
   prefix: string,
   group: Readonly<Record<string, string | number>>,
@@ -32,8 +38,8 @@ function groupVariables(
 
 function foundationVariables(): Variables {
   const easing: Variables = {};
-  for (const [key, [x1, y1, x2, y2]] of Object.entries(foundation.easing)) {
-    easing[`--ease-${kebab(key)}`] = `cubic-bezier(${x1}, ${y1}, ${x2}, ${y2})`;
+  for (const [key, value] of Object.entries(foundation.easing)) {
+    easing[`--ease-${kebab(key)}`] = cubicBezier(value);
   }
   return {
     ...groupVariables("space", foundation.space, "px"),

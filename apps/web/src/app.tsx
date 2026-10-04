@@ -1,33 +1,67 @@
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import styles from "./app.module.css";
 import { BoardView } from "./components/board-view";
 import { GameOver } from "./components/game-over";
 import { PieceView } from "./components/piece-view";
+import { SoundToggle } from "./components/sound-toggle";
 import { Tray } from "./components/tray";
 import { cssVars } from "./css-vars";
+import { useFeedback } from "./feedback/use-feedback";
 import { useDrag } from "./game/use-drag";
 import { useGame } from "./game/use-game";
 
 export function App() {
-  const { state, getState, place, restart } = useGame();
+  const { state, best, isNewBest, getState, place, restart } = useGame();
   const boardRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
-  const { drag, slotHandlers } = useDrag({
+  const trayRef = useRef<HTMLDivElement>(null);
+  const { onMove, soundOn, toggleSound, unlockAudio, resetEffects } =
+    useFeedback(boardRef);
+
+  const handleDrop = useCallback(
+    (trayIndex: number, row: number, col: number) => {
+      const before = getState().board;
+      const result = place(trayIndex, row, col);
+      if (result) onMove(before, result.event, result.state.isOver);
+    },
+    [getState, place, onMove],
+  );
+
+  const { drag, onSlotPointerDown, cancelDrag } = useDrag({
     boardRef,
     ghostRef,
+    trayRef,
     getState,
-    onDrop: place,
+    onDrop: handleDrop,
   });
 
+  const handleRestart = () => {
+    cancelDrag();
+    resetEffects();
+    restart();
+  };
+
   return (
-    <main className={styles.app}>
+    <main className={styles.app} onPointerDown={unlockAudio}>
       <header className={styles.header}>
-        <output className={styles.score} aria-label="Score">
-          {state.score}
-        </output>
-        <button type="button" className={styles.restart} onClick={restart}>
-          Restart
-        </button>
+        <div className={styles.scores}>
+          <output className={styles.score} aria-label="Score">
+            {state.score}
+          </output>
+          <span className={styles.best}>
+            Best <output aria-label="Best score">{best}</output>
+          </span>
+        </div>
+        <div className={styles.actions}>
+          <SoundToggle on={soundOn} onToggle={toggleSound} />
+          <button
+            type="button"
+            className={styles.restart}
+            onClick={handleRestart}
+          >
+            Restart
+          </button>
+        </div>
       </header>
 
       <div className={styles.boardArea}>
@@ -35,10 +69,11 @@ export function App() {
       </div>
 
       <Tray
+        ref={trayRef}
         tray={state.tray}
         board={state.board}
         draggingIndex={drag?.trayIndex ?? null}
-        slotHandlers={slotHandlers}
+        onSlotPointerDown={onSlotPointerDown}
       />
 
       {drag && (
@@ -50,7 +85,13 @@ export function App() {
         />
       )}
 
-      {state.isOver && <GameOver score={state.score} onRestart={restart} />}
+      {state.isOver && (
+        <GameOver
+          score={state.score}
+          isNewBest={isNewBest}
+          onRestart={handleRestart}
+        />
+      )}
     </main>
   );
 }

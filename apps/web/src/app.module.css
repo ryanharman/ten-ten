@@ -18,6 +18,24 @@
   justify-content: space-between;
 }
 
+.scores {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.best {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .score {
   font-family: var(--font-numeric);
   font-size: var(--font-size-xl);
@@ -52,5 +70,6 @@
   left: 0;
   z-index: var(--z-drag);
   pointer-events: none;
+  transform-origin: 0 0;
   will-change: transform;
 }

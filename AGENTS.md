@@ -17,7 +17,7 @@ Guidance for AI agents (and humans) working in this repo.
 
 ## Project status
 
-Steps 1–3 and 4a done — the game is playable on web. Next: 4b (animations, sound, haptics, high score).
+Steps 1–3, 4a and 4b done — playable web game with animations, sound, haptics and high score. Next: 4c (PWA/offline, portrait, icons).
 See `docs/project-brief.md` §8 for the roadmap.
 
 ## Repo layout
@@ -67,10 +67,16 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 
 - `src/game/`: `useGame` (state), `dragController` (pointer drag, framework-agnostic),
   `useDrag` (React binding), `boardPreview` (imperative preview), `geometry` (snapping maths).
+- `src/feedback/`: `boardEffects` (place/clear animations via cell attributes), `sound`
+  (Web Audio synth), `haptics`, `useFeedback` (orchestrates per move; sound setting).
+- `src/storage.ts`: the only place that touches localStorage.
 - `src/components/`: `BoardView` (memoised; children = 100 cells in row-major
   order — the preview relies on this), `Tray`, `PieceView` (sized by `--pitch`), `GameOver`.
 - Styles are CSS Modules using token variables only.
 - Never set React state from pointermove; keep per-frame work in the controller's rAF callback.
+- Imperative cell attributes (`data-preview`, `data-clear`, `data-placed`, `data-clearing`)
+  are owned by `boardPreview` / `boardEffects`; React must not manage them. Reset them on restart.
+- Any new animation must respect `prefers-reduced-motion` and use duration/easing tokens.
 - Tests run in happy-dom; component tests use Testing Library.
 - UI changes: verify in a real browser at phone sizes (see brief §7, "Manual browser verification").
 

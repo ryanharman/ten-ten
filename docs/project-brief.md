@@ -156,6 +156,22 @@ Key principles:
   `--layout-max-width`); the board area is a size container and the board is
   `min(100cqw, 100cqh)` square; tray slots are sized from container width.
   Safe-area insets via `env(safe-area-inset-*)`, `100dvh` height.
+- **Drag robustness:** after a drag starts, pointer events are read from
+  `window` (not the tray slot), so release is always seen. Starting a new drag
+  cancels any previous one, and Restart cancels any drag — a lost pointer-up
+  can't leave a piece stuck on screen. (Added after a one-off report of a
+  stuck piece after a line clear; not reproduced in 800 automated moves.)
+- **Feedback (`src/feedback/`):** placement pop and a line-clear wave
+  (flash → shrink, rippling outward from the drop point, staggered by
+  `--duration-stagger`) via attributes + CSS animations on board cells, the
+  cleared block drawn by `::after` so the empty cell shows beneath; invalid
+  drops fly back to the tray (Web Animations API). All motion is skipped under
+  `prefers-reduced-motion`. Sounds are synthesized with Web Audio (no assets):
+  click on place, pentatonic run on clear (longer for more lines), falling
+  phrase on game over; mute toggle persisted. Haptics via the Vibration API
+  (Android only; iOS Safari has none — native haptics come with RN).
+- **Persistence:** `src/storage.ts` wraps localStorage (namespaced `ten-ten:`,
+  failure-tolerant). Stores best score and sound setting.
 - **Touch feel:** on touch, the dragged piece floats 1.5 cells above the finger
   (`TOUCH_LIFT_CELLS`); with a mouse it centres on the cursor. Tray pieces that
   can't fit anywhere are dimmed.
@@ -223,10 +239,10 @@ Tooling as configured:
 | 1 | Tooling & workspace: pnpm workspace, TS base config, Biome, Fallow, Vitest, `pnpm check` | Done |
 | 2 | `packages/core`: board (bitboard/typed array), piece set, seeded RNG, deal/fit/place/clear/game-over, pluggable scoring, tests | Done |
 | 3 | `packages/tokens`: design tokens + light/dark themes, emitted as CSS custom properties | Done |
-| 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | In progress — 4a done |
+| 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | In progress — 4a, 4b done |
 | 4a | Responsive board + tray, pointer drag with lift, drop preview incl. line-clear highlight, scoring display, game over + restart | Done |
-| 4b | Feedback: placement/clear animations, invalid-drop return animation, sound, haptics, local high score | Next |
-| 4c | PWA (offline, installable), portrait lock, theme-color meta, icons | — |
+| 4b | Feedback: placement/clear animations, invalid-drop return animation, sound, haptics, local high score; drag robustness | Done |
+| 4c | PWA (offline, installable), portrait lock, theme-color meta, icons | Next |
 | 5 | Measure: bundle + drag perf on low-end device; set concrete budgets | — |
 
 ## 9. Open questions
@@ -270,3 +286,7 @@ Tooling as configured:
 | 2026-10-04 | Pure-CSS responsive layout via container queries | No JS layout/resize handling |
 | 2026-10-04 | Single root Vitest run with coverage fed to Fallow; check order typecheck → lint → test → fallow | Accurate CRAP scores; untested complex code fails the check |
 | 2026-10-04 | Removed `cellClearHint` token; clearing lines preview in the dragged piece's colour | Clearer feedback, one fewer token |
+| 2026-10-04 | Drag listens on `window`; new drag / Restart cancel any active drag | Self-healing against lost pointer-up (user-reported stuck piece) |
+| 2026-10-04 | Effects via data attributes + CSS keyframes; return-to-tray via WAAPI; reduced-motion respected | No React renders for effects; GPU-friendly transforms |
+| 2026-10-04 | Synthesized Web Audio sounds; Vibration API haptics | Zero asset weight; works offline |
+| 2026-10-04 | localStorage for best score + sound setting (namespaced, try/catch) | Local-only persistence per POC scope |
