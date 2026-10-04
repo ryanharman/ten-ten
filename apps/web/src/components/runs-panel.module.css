@@ -1,0 +1,104 @@
+.sheet {
+  composes: screen from "../styles/shared.module.css";
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-sheet);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  background: var(--color-bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.close {
+  composes: pill from "../styles/shared.module.css";
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.stat {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.stat dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.stat dd {
+  margin: 0;
+  font-family: var(--font-numeric);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.table caption {
+  margin-bottom: var(--space-2);
+  font-weight: var(--font-weight-bold);
+  text-align: start;
+}
+
+.table th {
+  padding: var(--space-2) var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-align: start;
+}
+
+.table td {
+  padding: var(--space-2) var(--space-1);
+  border-top: 1px solid var(--color-surface);
+}
+
+.score {
+  font-weight: var(--font-weight-bold);
+}
+
+tr[data-outcome="abandoned"] td {
+  color: var(--color-text-muted);
+}
+
+.tag {
+  margin-inline-start: var(--space-2);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--font-size-xs);
+}

@@ -4,9 +4,15 @@ interface GameOverProps {
   readonly score: number;
   readonly isNewBest: boolean;
   readonly onRestart: () => void;
+  readonly onShowRuns: () => void;
 }
 
-export function GameOver({ score, isNewBest, onRestart }: GameOverProps) {
+export function GameOver({
+  score,
+  isNewBest,
+  onRestart,
+  onShowRuns,
+}: GameOverProps) {
   return (
     <div
       className={styles.overlay}
@@ -22,6 +28,9 @@ export function GameOver({ score, isNewBest, onRestart }: GameOverProps) {
         {isNewBest && <p className={styles.best}>New best!</p>}
         <button type="button" className={styles.button} onClick={onRestart}>
           Play again
+        </button>
+        <button type="button" className={styles.link} onClick={onShowRuns}>
+          See runs
         </button>
       </div>
     </div>

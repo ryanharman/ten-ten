@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
-  "entry": ["apps/web/pwa-assets.config.ts"],
+  "entry": [
+    "apps/web/pwa-assets.config.ts",
+    "apps/web/src/styles/*.module.css"
+  ],
   "workspaces": {
     "patterns": ["apps/*", "packages/*"]
   },

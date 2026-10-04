@@ -23,3 +23,5 @@ export type { Cell, ColourSlot, Piece } from "./pieces";
 export { PIECES } from "./pieces";
 export type { ScoringEvent, ScoringRule } from "./scoring";
 export { classicScoring } from "./scoring";
+export type { SavedGame } from "./serialize";
+export { deserializeGame, serializeGame } from "./serialize";

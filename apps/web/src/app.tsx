@@ -1,10 +1,11 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import styles from "./app.module.css";
 import { applyPendingUpdate } from "./app-update";
 import { BoardView } from "./components/board-view";
 import { GameOver } from "./components/game-over";
 import { PieceView } from "./components/piece-view";
 import { RotatePrompt } from "./components/rotate-prompt";
+import { RunsPanel } from "./components/runs-panel";
 import { SoundToggle } from "./components/sound-toggle";
 import { Tray } from "./components/tray";
 import { cssVars } from "./css-vars";
@@ -13,7 +14,10 @@ import { useDrag } from "./game/use-drag";
 import { useGame } from "./game/use-game";
 
 export function App() {
-  const { state, best, isNewBest, getState, place, restart } = useGame();
+  const { state, best, isNewBest, history, getState, place, restart } =
+    useGame();
+  const [showRuns, setShowRuns] = useState(false);
+  const closeRuns = useCallback(() => setShowRuns(false), []);
   const boardRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const trayRef = useRef<HTMLDivElement>(null);
@@ -57,12 +61,15 @@ export function App() {
           </span>
         </div>
         <div className={styles.actions}>
-          <SoundToggle on={soundOn} onToggle={toggleSound} />
           <button
             type="button"
-            className={styles.restart}
-            onClick={handleRestart}
+            className={styles.pill}
+            onClick={() => setShowRuns(true)}
           >
+            Runs
+          </button>
+          <SoundToggle on={soundOn} onToggle={toggleSound} />
+          <button type="button" className={styles.pill} onClick={handleRestart}>
             Restart
           </button>
         </div>
@@ -94,8 +101,11 @@ export function App() {
           score={state.score}
           isNewBest={isNewBest}
           onRestart={handleRestart}
+          onShowRuns={() => setShowRuns(true)}
         />
       )}
+      {showRuns && <RunsPanel history={history} onClose={closeRuns} />}
+
       <RotatePrompt />
     </main>
   );
