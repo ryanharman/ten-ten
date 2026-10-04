@@ -14,6 +14,7 @@
     "lint:fix": "biome check --write .",
     "fallow": "fallow",
     "test": "pnpm -r test",
+    "bench": "pnpm --filter @ten-ten/core bench",
     "check": "pnpm typecheck && pnpm lint && pnpm fallow && pnpm test"
   },
   "devDependencies": {

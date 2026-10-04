@@ -47,7 +47,7 @@ placed.
 | Responsiveness | Works across phone and tablet sizes |
 | Docs | Agent docs (`AGENTS.md`) + this brief kept current, committed in git |
 
-## 4. Gameplay loop (draft)
+## 4. Gameplay loop
 
 ```
 start → deal pieces → [player drags piece → validate placement → place
@@ -55,18 +55,33 @@ start → deal pieces → [player drags piece → validate placement → place
       → any piece placeable? ] → loop / game over
 ```
 
-Design requirements for the loop:
+Design requirements for the loop (implemented in `packages/core`):
 
-- **Pure, deterministic game core.** Game state transitions are pure functions
-  of `(state, action) → state`, with a seedable RNG. Enables testing, replays,
-  undo, and sharing the exact same logic between web and native.
-- **Scoring as a strategy.** `score(event) → points` is a swappable module
-  receiving a rich event (cells placed, rows/cols cleared, combo/streak count,
-  piece size) so we can iterate on scoring without touching rules.
-- **Board representation optimised for speed** — e.g. bitboard / typed array
-  (100 cells fits in two 64-bit words or a `Uint8Array(100)`), precomputed
-  row/column masks, and precomputed piece masks so "can this piece fit
-  anywhere?" checks are cheap.
+- **Pure, deterministic game core.** `placePiece(state, trayIndex, row, col, rules)`
+  returns `{ state, event }` (or `null` for an illegal move) and never mutates
+  its input. Randomness comes from a seedable PRNG (mulberry32) whose state
+  lives in `GameState.rngState`, so games are replayable from a seed.
+- **Scoring as a strategy.** `GameRules.scoring` is a `ScoringRule`:
+  `(ScoringEvent) → points`, where the event carries `cellsPlaced`,
+  `rowsCleared`, `colsCleared` and `streak` (consecutive clearing moves).
+  Current placeholder `classicScoring`: 1 pt/cell + 10 × n(n+1)/2 for n lines.
+- **Rules as data.** `GameRules` = `{ deck (pieces + weights), traySize, scoring }`;
+  `DEFAULT_RULES` is the classic game. Tuning doesn't touch engine code.
+- **Move events drive presentation.** `MoveEvent` reports the piece, position,
+  cleared lines, points and whether a new tray was dealt, for UI animation,
+  sound and haptics.
+
+### Engine internals (performance)
+
+- **Board** = `occupancy: Uint16Array(10)` (one 10-bit mask per row) +
+  `colours: Uint8Array(100)` (colour slot per cell, 0 = empty).
+- **Pieces** are authored as ASCII art and compiled once into per-row bitmasks.
+  A fit check is ≤5 bitwise ANDs; a full row is `0x3FF`; full columns are the
+  AND of all rows.
+- **Drag hot paths are allocation-free:** `canPlace` and `previewLines`
+  (returns a packed `LineMask` number: bits 0–9 rows, 10–19 cols).
+- Benchmarks (`pnpm bench`, Apple Silicon, includes Vitest getter overhead):
+  `previewLines` ≈ 1 µs/call; `canPlaceAnywhere` for all 19 pieces ≈ 0.11 ms.
 
 ## 4a. Rules (confirmed)
 
@@ -167,8 +182,8 @@ Tooling as configured:
 | Step | Scope | Status |
 |---|---|---|
 | 1 | Tooling & workspace: pnpm workspace, TS base config, Biome, Fallow, Vitest, `pnpm check` | Done |
-| 2 | `packages/core`: board (bitboard/typed array), piece set, seeded RNG, deal/fit/place/clear/game-over, pluggable scoring, tests | Next |
-| 3 | `packages/tokens`: design tokens + light/dark themes, emitted as CSS custom properties | — |
+| 2 | `packages/core`: board (bitboard/typed array), piece set, seeded RNG, deal/fit/place/clear/game-over, pluggable scoring, tests | Done |
+| 3 | `packages/tokens`: design tokens + light/dark themes, emitted as CSS custom properties | Next |
 | 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | — |
 | 5 | Measure: bundle + drag perf on low-end device; set concrete budgets | — |
 
@@ -176,8 +191,8 @@ Tooling as configured:
 
 | # | Question | Status |
 |---|---|---|
-| Q1 | Scoring model | TBD (intentionally deferred; loop supports pluggable scoring) |
-| Q2 | Piece distribution / weighting | Open — tune via playtesting |
+| Q1 | Scoring model — placeholder `classicScoring` in place; streak available for combo bonuses | TBD |
+| Q2 | Piece distribution / weighting — currently uniform (weight 1 each) | Open — tune via playtesting |
 | Q3 | Web E2E testing (Playwright?) — Vitest chosen for unit tests | Open |
 | Q4 | Hosting (likely subdomain of owner's personal domain) | Deferred |
 | Q5 | Concrete performance budgets (bundle size, frame time) | Set after scaffolding + first measurement |
@@ -200,3 +215,7 @@ Tooling as configured:
 | 2026-10-04 | TypeScript 7, Biome 2, Fallow 3 (strict), Vitest 5, Vite 8, React 19 | Latest stable versions at scaffold time |
 | 2026-10-04 | Workspace packages consumed as TS source (no package build step) | Simpler, faster; Vite & Vitest compile TS directly |
 | 2026-10-04 | Fallow strict mode + architecture boundaries | Owner wants warnings actioned every iteration; enforce pure core |
+| 2026-10-04 | Board as row bitmasks (`Uint16Array`) + colour array (`Uint8Array`) | Constant-time-ish fit checks, cheap copies, allocation-free drag previews |
+| 2026-10-04 | Engine API: pure `placePiece` returning `{ state, event }`; rules (deck, tray size, scoring) passed as data | Determinism, replayability, tunable without code changes |
+| 2026-10-04 | Placeholder scoring: 1/cell + triangular line bonus; tray of 3; uniform piece weights | Classic feel until scoring is designed |
+| 2026-10-04 | Benchmarks via Vitest 5 `bench` in `*.bench.ts` (not part of `pnpm check`) | Track hot-path performance without slowing the check loop |

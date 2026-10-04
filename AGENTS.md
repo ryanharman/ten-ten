@@ -17,7 +17,7 @@ Guidance for AI agents (and humans) working in this repo.
 
 ## Project status
 
-Step 1 (tooling & workspace) done. Next: step 2 — game engine in `packages/core`.
+Steps 1 (tooling) and 2 (game engine) done. Next: step 3 — design tokens in `packages/tokens`.
 See `docs/project-brief.md` §8 for the roadmap.
 
 ## Repo layout
@@ -47,10 +47,20 @@ global `pnpm` is older, use `npx pnpm@12.9.1 <cmd>`.
 | `pnpm lint` / `pnpm lint:fix` | Biome check / auto-fix |
 | `pnpm fallow` | Fallow: dead code, duplication, complexity, boundaries |
 | `pnpm test` | Vitest in every package |
+| `pnpm bench` | Core hot-path benchmarks (`*.bench.ts`); run when touching `packages/core` hot paths |
 | `pnpm check` | All of the above in sequence — must pass before committing |
 
 Adding deps: `pnpm --filter @ten-ten/<pkg> add <dep>` (add `-D` for dev deps).
 Never add runtime dependencies to `packages/core` without logging a decision in the brief.
+
+## Game engine (`packages/core`) quick reference
+
+- Entry: `newGame(seed, rules?)` → `GameState`; `placePiece(state, trayIndex, row, col, rules?)` → `{ state, event } | null`.
+- Drag hot paths (must stay allocation-free): `canPlace`, `previewLines`.
+- Lines are a packed `LineMask` number — decode with `rowsOf` / `colsOf` / `countLines`.
+- Scoring is pluggable via `GameRules.scoring`; piece odds via `GameRules.deck`.
+- Tests sit next to source (`*.test.ts`); board fixtures use ASCII art via `src/test-utils.ts`.
+- Details & rationale: `docs/project-brief.md` §4.
 
 ## Hard rules
 
