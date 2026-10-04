@@ -1,0 +1,26 @@
+/*
+ * Sized from the app's inline-size container. Each slot is a square that fits
+ * the largest piece (5 cells) with half a cell of breathing room.
+ */
+.tray {
+  --slot-cells: 5.5;
+  --pitch: calc(100cqw / 3 / var(--slot-cells));
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: calc(var(--pitch) * var(--slot-cells));
+}
+
+.slot {
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+}
+
+.slot[data-dragging] > * {
+  visibility: hidden;
+}
+
+.slot[data-blocked] {
+  opacity: var(--opacity-disabled);
+}

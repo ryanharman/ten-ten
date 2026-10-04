@@ -100,11 +100,11 @@ Implemented in `packages/tokens` (platform-agnostic TS, no runtime deps).
 
 - **Foundation tokens** (`foundation.ts`, theme-independent): spacing scale,
   radii, font families/sizes/weights, line heights, durations, easings,
-  opacities, board gap ratio. Values are **unitless numbers** (px / ms) so React
+  opacities, layout max width, z-index layers, board gap ratio. Values are **unitless numbers** (px / ms) so React
   Native can use them directly; the CSS serializer adds units. Easings are
   cubic-bézier tuples, valid for CSS and RN `Easing.bezier`.
 - **Themes** (`themes.ts`): semantic colours (`bg`, `surface`, `text`,
-  `textMuted`, `accent`, `boardBg`, `cellEmpty`, `cellClearHint`, `danger`) plus
+  `textMuted`, `accent`, `boardBg`, `cellEmpty`, `danger`) plus
   a **piece palette keyed by the engine's `ColourSlot`** (1–9) — the engine says
   *which* slot, the theme says *what colour*. Colours are **`#RRGGBB` hex only**
   (RN does not support `oklch()` etc.).
@@ -145,7 +145,20 @@ Key principles:
   early App Store build.
 - **Drag performance:** the dragged piece moves via direct style updates
   (`transform`) driven by pointer events + `requestAnimationFrame`, not React
-  state, so React does not re-render every frame.
+  state, so React does not re-render during a drag. The drop preview toggles
+  `data-preview` / `data-clear` attributes on board cells directly
+  (`game/board-preview.ts`), only when the snapped cell changes. React renders
+  once at drag start (ghost), once at drop (new state).
+- **Drag logic is framework-agnostic** (`game/drag-controller.ts`), with a thin
+  React binding (`useDrag`). It should port to a RN gesture handler with the
+  same snapping maths (`game/geometry.ts`).
+- **Layout is pure CSS:** the app column is an inline-size container (max
+  `--layout-max-width`); the board area is a size container and the board is
+  `min(100cqw, 100cqh)` square; tray slots are sized from container width.
+  Safe-area insets via `env(safe-area-inset-*)`, `100dvh` height.
+- **Touch feel:** on touch, the dragged piece floats 1.5 cells above the finger
+  (`TOUCH_LIFT_CELLS`); with a mouse it centres on the cursor. Tray pieces that
+  can't fit anywhere are dimmed.
 
 ## 6a. POC scope
 
@@ -192,7 +205,16 @@ Tooling as configured:
 - **Fallow 3** — all warn-by-default cleanup rules promoted to error (strict);
   `private-type-leaks` enabled as warn; suppressions must state a reason;
   architecture **boundaries** enforce `core → nothing`, `web → core`.
-- **Vitest 5** for unit tests.
+- **Vitest 5** for unit tests — one root run (`vitest.config.ts`, projects per
+  package; web uses happy-dom + Testing Library) producing V8 coverage, which
+  is fed to Fallow so its CRAP (complexity × untested) scores are exact.
+  `pnpm check` order: typecheck → Biome → tests+coverage → Fallow.
+- **Fallow overrides:** `private-type-leaks` is off for `apps/**` (component
+  props types are app-internal); still on for `packages/**`.
+- **Manual browser verification:** for UI changes, drive the dev server with
+  headless Playwright at phone sizes (390×844, 320×568) and tablet (768×1024),
+  mouse + touch (CDP touch events) drags, light + dark themes, and check the
+  console for errors. Playwright is not a project dependency yet (see Q3).
 
 ## 8. Roadmap
 
@@ -201,7 +223,10 @@ Tooling as configured:
 | 1 | Tooling & workspace: pnpm workspace, TS base config, Biome, Fallow, Vitest, `pnpm check` | Done |
 | 2 | `packages/core`: board (bitboard/typed array), piece set, seeded RNG, deal/fit/place/clear/game-over, pluggable scoring, tests | Done |
 | 3 | `packages/tokens`: design tokens + light/dark themes, emitted as CSS custom properties | Done |
-| 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | Next |
+| 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | In progress — 4a done |
+| 4a | Responsive board + tray, pointer drag with lift, drop preview incl. line-clear highlight, scoring display, game over + restart | Done |
+| 4b | Feedback: placement/clear animations, invalid-drop return animation, sound, haptics, local high score | Next |
+| 4c | PWA (offline, installable), portrait lock, theme-color meta, icons | — |
 | 5 | Measure: bundle + drag perf on low-end device; set concrete budgets | — |
 
 ## 9. Open questions
@@ -241,3 +266,7 @@ Tooling as configured:
 | 2026-10-04 | Theme CSS generated at build time via Vite virtual module; light default, dark via OS preference, `data-theme` override | Zero runtime cost; follows system dark mode |
 | 2026-10-04 | WCAG contrast thresholds enforced in token tests | Accessibility regressions fail CI |
 | 2026-10-04 | Vite & Vitest in `apps/web` run with `--configLoader runner` (experimental) | Lets `vite.config.ts` import workspace TS source (extensionless imports). Fallback if it breaks: explicit `.ts` import extensions in packages |
+| 2026-10-04 | Web drag: framework-agnostic controller + imperative DOM preview; React renders only at drag start/drop | Smooth drag on low-end phones; portable logic |
+| 2026-10-04 | Pure-CSS responsive layout via container queries | No JS layout/resize handling |
+| 2026-10-04 | Single root Vitest run with coverage fed to Fallow; check order typecheck → lint → test → fallow | Accurate CRAP scores; untested complex code fails the check |
+| 2026-10-04 | Removed `cellClearHint` token; clearing lines preview in the dragged piece's colour | Clearer feedback, one fewer token |

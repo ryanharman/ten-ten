@@ -14,8 +14,6 @@ export type ThemeColours = {
   readonly accent: HexColour;
   readonly boardBg: HexColour;
   readonly cellEmpty: HexColour;
-  /** Highlight on cells in lines that a placement would clear. */
-  readonly cellClearHint: HexColour;
   readonly danger: HexColour;
 };
 
@@ -38,7 +36,6 @@ export const lightTheme: Theme = {
     accent: "#5B4FD6",
     boardBg: "#F7F5F1",
     cellEmpty: "#ECE8E1",
-    cellClearHint: "#FFF4C2",
     danger: "#C42E2E",
   },
   piece: {
@@ -65,7 +62,6 @@ export const darkTheme: Theme = {
     accent: "#8F82F0",
     boardBg: "#121419",
     cellEmpty: "#262B35",
-    cellClearHint: "#4A4425",
     danger: "#EE5A50",
   },
   piece: {

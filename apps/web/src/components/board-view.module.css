@@ -1,0 +1,30 @@
+/* Sized by the nearest size container (the board area): largest square that fits. */
+.board {
+  --pitch: calc(min(100cqw, 100cqh) / var(--cells));
+  --gap: calc(var(--pitch) * var(--board-gap-ratio));
+  display: grid;
+  grid-template-columns: repeat(var(--cells), 1fr);
+  grid-template-rows: repeat(var(--cells), 1fr);
+  gap: var(--gap);
+  width: calc(var(--pitch) * var(--cells));
+  aspect-ratio: 1;
+  padding: calc(var(--gap) / 2);
+  background: var(--color-board-bg);
+  border-radius: var(--radius-lg);
+}
+
+.cell {
+  background: var(--cell-colour, var(--color-cell-empty));
+  border-radius: var(--radius-cell);
+}
+
+/* Drop preview, toggled imperatively by game/board-preview.ts. */
+.cell[data-preview] {
+  background: var(--preview-colour);
+  opacity: var(--opacity-preview);
+}
+
+.cell[data-clear] {
+  background: var(--preview-colour);
+  opacity: 1;
+}

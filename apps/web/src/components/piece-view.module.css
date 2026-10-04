@@ -1,0 +1,13 @@
+.piece {
+  --gap: calc(var(--pitch) * var(--board-gap-ratio));
+  --cell-size: calc(var(--pitch) - var(--gap));
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cell-size));
+  grid-template-rows: repeat(var(--rows), var(--cell-size));
+  gap: var(--gap);
+}
+
+.cell {
+  background: var(--piece-colour);
+  border-radius: var(--radius-cell);
+}

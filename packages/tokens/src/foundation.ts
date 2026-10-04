@@ -23,7 +23,9 @@ export const foundation = {
     out: [0, 0, 0.2, 1],
     in: [0.4, 0, 1, 1],
   } satisfies Record<string, CubicBezier>,
-  /** Gap between board cells as a fraction of cell size. */
+  layout: { maxWidth: 560 },
+  zIndex: { overlay: 10, drag: 20 },
+  /** Gap between board cells as a fraction of cell pitch. */
   boardGapRatio: 0.08,
   opacity: { preview: 0.45, disabled: 0.4 },
 } as const;

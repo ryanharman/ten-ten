@@ -45,6 +45,8 @@ function foundationVariables(): Variables {
     ...groupVariables("duration", foundation.duration, "ms"),
     ...easing,
     ...groupVariables("opacity", foundation.opacity),
+    ...groupVariables("layout", foundation.layout, "px"),
+    ...groupVariables("z", foundation.zIndex),
     "--board-gap-ratio": String(foundation.boardGapRatio),
   };
 }

@@ -17,7 +17,7 @@ Guidance for AI agents (and humans) working in this repo.
 
 ## Project status
 
-Steps 1–3 done (tooling, game engine, design tokens). Next: step 4 — the playable web game in `apps/web`.
+Steps 1–3 and 4a done — the game is playable on web. Next: 4b (animations, sound, haptics, high score).
 See `docs/project-brief.md` §8 for the roadmap.
 
 ## Repo layout
@@ -46,10 +46,10 @@ global `pnpm` is older, use `npx pnpm@12.9.1 <cmd>`.
 | `pnpm build` | Production build of the web app |
 | `pnpm typecheck` | `tsc --noEmit` in every package (TypeScript 7) |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / auto-fix |
-| `pnpm fallow` | Fallow: dead code, duplication, complexity, boundaries |
-| `pnpm test` | Vitest in every package |
+| `pnpm fallow` | Fallow with coverage (run `pnpm test` first): dead code, duplication, complexity/CRAP, boundaries |
+| `pnpm test` | All tests in one Vitest run (root `vitest.config.ts`) with V8 coverage → `coverage/` |
 | `pnpm bench` | Core hot-path benchmarks (`*.bench.ts`); run when touching `packages/core` hot paths |
-| `pnpm check` | All of the above in sequence — must pass before committing |
+| `pnpm check` | typecheck → lint → test → fallow — must pass before committing |
 
 Adding deps: `pnpm --filter @ten-ten/<pkg> add <dep>` (add `-D` for dev deps).
 Never add runtime dependencies to `packages/core` without logging a decision in the brief.
@@ -62,6 +62,17 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 - Scoring is pluggable via `GameRules.scoring`; piece odds via `GameRules.deck`.
 - Tests sit next to source (`*.test.ts`); board fixtures use ASCII art via `src/test-utils.ts`.
 - Details & rationale: `docs/project-brief.md` §4.
+
+## Web app (`apps/web`) quick reference
+
+- `src/game/`: `useGame` (state), `dragController` (pointer drag, framework-agnostic),
+  `useDrag` (React binding), `boardPreview` (imperative preview), `geometry` (snapping maths).
+- `src/components/`: `BoardView` (memoised; children = 100 cells in row-major
+  order — the preview relies on this), `Tray`, `PieceView` (sized by `--pitch`), `GameOver`.
+- Styles are CSS Modules using token variables only.
+- Never set React state from pointermove; keep per-frame work in the controller's rAF callback.
+- Tests run in happy-dom; component tests use Testing Library.
+- UI changes: verify in a real browser at phone sizes (see brief §7, "Manual browser verification").
 
 ## Hard rules
 
@@ -82,7 +93,7 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 
 ## Iteration checklist (run at the end of every iteration)
 
-1. `pnpm check` passes (typecheck → Biome → Fallow → tests).
+1. `pnpm check` passes (typecheck → Biome → tests+coverage → Fallow).
 2. Review **warnings**, not just errors: editor LSP diagnostics, Biome warnings,
    and Fallow warnings (e.g. `private-type-leaks`, `css-*` rules). Fix them, or
    justify in place. Fallow suppressions require a reason
