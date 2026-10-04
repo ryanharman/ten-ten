@@ -15,7 +15,9 @@
     "fallow": "fallow --coverage coverage/coverage-final.json",
     "test": "vitest run --coverage",
     "bench": "pnpm --filter @ten-ten/core bench",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm fallow"
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm fallow && pnpm build && pnpm size",
+    "size": "pnpm --filter @ten-ten/web size",
+    "perf": "pnpm --filter @ten-ten/web perf"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

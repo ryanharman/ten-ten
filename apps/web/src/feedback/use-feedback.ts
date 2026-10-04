@@ -2,7 +2,7 @@ import type { Board, MoveEvent } from "@ten-ten/core";
 import { countLines } from "@ten-ten/core";
 import { foundation } from "@ten-ten/tokens";
 import type { RefObject } from "react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { prefersReducedMotion } from "../motion";
 import { readStored, writeStored } from "../storage";
 import type { BoardEffects } from "./board-effects";
@@ -25,6 +25,16 @@ export function useFeedback(boardRef: RefObject<HTMLElement | null>) {
   soundRef.current ??= createSoundPlayer(() => soundOnRef.current);
   const effects = effectsRef.current;
   const sound = soundRef.current;
+
+  // Create the audio context while idle so the first touch only resumes it.
+  useEffect(() => {
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(sound.prepare, { timeout: 2000 });
+      return () => cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(sound.prepare, 500);
+    return () => window.clearTimeout(id);
+  }, [sound]);
 
   const onMove = useCallback(
     (before: Board, event: MoveEvent, isOver: boolean) => {

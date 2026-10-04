@@ -204,15 +204,37 @@ Key principles:
 | User-selectable themes | No — themes are for us to restyle; user choice later |
 | Hosting | Not yet decided; likely a subdomain of the owner's personal domain |
 
-## 6b. Performance targets
+## 6b. Performance targets & budgets
 
 Target: **any mobile phone**, so we design for low-end Android as the baseline.
 
-- Smooth drag (aim 60fps) on low-end devices; no per-frame React renders.
-- No allocations in drag/placement hot paths; precomputed piece & line masks.
-- Small initial bundle (budget to be set once the game exists).
-  Baseline after scaffolding: **~69 KB gzip JS**, nearly all React + ReactDOM.
-  If bundle size becomes a problem, Preact (via `preact/compat`) is an option.
+**Budgets (enforced):**
+
+| Budget | Limit | Current (2026-10-04) | Enforced by |
+|---|---|---|---|
+| Shipped JS (gzip, all chunks) | 85 KB | 75.5 KB | `pnpm size` (part of `pnpm check`) |
+| Shipped CSS (gzip) | 4 KB | 2.3 KB | `pnpm size` |
+| Drag p95 frame time @ 6× CPU slowdown | ≤ 20 ms | 16.8 ms | `pnpm perf` |
+| Longest main-thread task during play @ 6× | ≤ 50 ms | 0 (none) | `pnpm perf` |
+| Drop → next painted frame @ 6× | ≤ 50 ms | ~39 ms (≈ 2 frames) | `pnpm perf` |
+
+`pnpm perf` serves the production build, emulates a 390×844 @3x touch phone
+with Chromium CPU throttling (6× ≈ budget Android; 4× = Lighthouse mobile),
+drags a piece across the board for ~3 s, drops it, and reports frame
+percentiles, long tasks and drop latency. It is not in `pnpm check` (needs a
+browser, ~10 s); run it for any change to drag, rendering, effects or startup.
+
+**Findings so far:**
+
+- Dragging holds a steady 60 fps (p50 & p95 16.7 ms) even at 6× slowdown.
+- Creating the Web Audio `AudioContext` on first touch caused a **120–250 ms
+  long task** that froze the start of the first drag. Fixed by creating it
+  during idle after load and only `resume()`-ing it in the gesture.
+- React + ReactDOM are ~60 of the 75 KB JS. If the budget tightens, Preact
+  (`preact/compat`) is the obvious lever.
+
+Principles: no per-frame React renders; no allocations in drag hot paths;
+precomputed piece & line masks; measure before and after optimising.
 
 ## 7. Quality workflow (every iteration)
 
@@ -257,7 +279,7 @@ Tooling as configured:
 | 4a | Responsive board + tray, pointer drag with lift, drop preview incl. line-clear highlight, scoring display, game over + restart | Done |
 | 4b | Feedback: placement/clear animations, invalid-drop return animation, sound, haptics, local high score; drag robustness | Done |
 | 4c | PWA (offline, installable), portrait lock, theme-color meta, icons | Done |
-| 5 | Measure: bundle + drag perf on low-end device; set concrete budgets | Next |
+| 5 | Measure: bundle + drag perf on low-end device; set concrete budgets | Done |
 
 ## 9. Open questions
 
@@ -265,9 +287,9 @@ Tooling as configured:
 |---|---|---|
 | Q1 | Scoring model — placeholder `classicScoring` in place; streak available for combo bonuses | TBD |
 | Q2 | Piece distribution / weighting — currently uniform (weight 1 each) | Open — tune via playtesting |
-| Q3 | Web E2E testing (Playwright?) — Vitest chosen for unit tests | Open |
+| Q3 | Web E2E test suite — Playwright now a dev dep (used by `pnpm perf`); no E2E tests yet | Open |
 | Q4 | Hosting (likely subdomain of owner's personal domain) | Deferred |
-| Q5 | Concrete performance budgets (bundle size, frame time) | Set after scaffolding + first measurement |
+| Q5 | Concrete performance budgets | Resolved — see §6b |
 | Q6 | Final name (placeholder "ten-ten" + block icon in use) | Open |
 | Q7 | User-selectable themes, colour-blind palettes | Deferred (post-POC) |
 
@@ -307,3 +329,6 @@ Tooling as configured:
 | 2026-10-04 | PWA via vite-plugin-pwa 1.3 (2.0 blocked by pnpm minimum release age); updates applied on new game | Offline + installable; never interrupt a game |
 | 2026-10-04 | Portrait: manifest orientation + rotate prompt for landscape phones only | Browsers can't lock orientation in a tab; tablets fit in landscape |
 | 2026-10-04 | Placeholder name "ten-ten" and block-art icon | Rename deferred (Q6) |
+| 2026-10-04 | Budgets: JS ≤ 85 KB gz, CSS ≤ 4 KB gz (gated in `pnpm check`); drag p95 ≤ 20 ms, long task ≤ 50 ms, drop→paint ≤ 50 ms @ 6× CPU (`pnpm perf`) | Measured baseline + headroom; low-end Android target |
+| 2026-10-04 | Create AudioContext during idle; resume on gesture | Removed a 120–250 ms first-touch stall |
+| 2026-10-04 | Playwright added as web dev dependency (perf harness) | Real-browser measurement; foundation for future E2E |

@@ -1,11 +1,17 @@
 /**
  * Tiny synthesized sound effects via the Web Audio API — no audio assets to
- * download. Browsers only allow audio after a user gesture, so call
- * `unlock()` from a pointer handler before the first sound.
+ * download.
+ *
+ * Creating an AudioContext is expensive (100–250 ms on a throttled mobile
+ * CPU), so `prepare()` creates it ahead of time during idle; browsers only
+ * require the cheap `resume()` to happen in a user gesture, via `unlock()`.
  */
 export type SoundKind = "place" | "clear" | "gameOver";
 
 export interface SoundPlayer {
+  /** Creates the audio context off the interaction path (call when idle). */
+  prepare(): void;
+  /** Resumes audio; must be called from a user gesture before sounds play. */
   unlock(): void;
   play(kind: SoundKind, lines?: number): void;
 }
@@ -84,11 +90,18 @@ const SOUNDS: Record<
 export function createSoundPlayer(isEnabled: () => boolean): SoundPlayer {
   let ctx: AudioContext | null = null;
 
+  const ensureContext = (): AudioContext | null => {
+    if (typeof AudioContext === "function") ctx ??= new AudioContext();
+    return ctx;
+  };
+
   return {
+    prepare() {
+      ensureContext();
+    },
     unlock() {
-      if (typeof AudioContext !== "function") return;
-      ctx ??= new AudioContext();
-      if (ctx.state === "suspended") void ctx.resume();
+      const context = ensureContext();
+      if (context?.state === "suspended") void context.resume();
     },
     play(kind, lines = 0) {
       if (!ctx || !isEnabled() || ctx.state !== "running") return;

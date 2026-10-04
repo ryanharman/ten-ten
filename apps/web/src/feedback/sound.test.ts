@@ -73,10 +73,22 @@ describe("createSoundPlayer", () => {
     expect(ctx.oscillators).toBe(before);
   });
 
+  it("prepare() creates the context ahead of time; unlock() only resumes it", () => {
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    const player = createSoundPlayer(() => true);
+    player.prepare();
+    expect(FakeAudioContext.instances).toHaveLength(1);
+    expect(FakeAudioContext.instances[0]?.resume).not.toHaveBeenCalled();
+    player.unlock();
+    expect(FakeAudioContext.instances).toHaveLength(1);
+    expect(FakeAudioContext.instances[0]?.resume).toHaveBeenCalledOnce();
+  });
+
   it("does nothing where Web Audio is unavailable", () => {
     vi.stubGlobal("AudioContext", undefined);
     const player = createSoundPlayer(() => true);
     expect(() => {
+      player.prepare();
       player.unlock();
       player.play("place");
     }).not.toThrow();

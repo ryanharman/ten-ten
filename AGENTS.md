@@ -17,7 +17,10 @@ Guidance for AI agents (and humans) working in this repo.
 
 ## Project status
 
-Steps 1–4 done — installable, offline-capable web game with animations, sound, haptics and high score. Next: step 5 (measure performance, set budgets).
+POC roadmap (steps 1–5) complete: installable, offline web game with animations,
+sound, haptics, high score, and enforced performance budgets. Next work is
+driven by the open questions in `docs/project-brief.md` §9 (scoring, piece
+weights, hosting, name, E2E tests).
 See `docs/project-brief.md` §8 for the roadmap.
 
 ## Repo layout
@@ -43,13 +46,15 @@ global `pnpm` is older, use `npx pnpm@12.9.1 <cmd>`.
 |---|---|
 | `pnpm install` | Install all workspace deps |
 | `pnpm dev` | Run the web app (Vite dev server) |
-| `pnpm build` | Production build of the web app |
 | `pnpm typecheck` | `tsc --noEmit` in every package (TypeScript 7) |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / auto-fix |
 | `pnpm fallow` | Fallow with coverage (run `pnpm test` first): dead code, duplication, complexity/CRAP, boundaries |
 | `pnpm test` | All tests in one Vitest run (root `vitest.config.ts`) with V8 coverage → `coverage/` |
 | `pnpm bench` | Core hot-path benchmarks (`*.bench.ts`); run when touching `packages/core` hot paths |
-| `pnpm check` | typecheck → lint → test → fallow — must pass before committing |
+| `pnpm build` | Production build of the web app (PWA included) |
+| `pnpm size` | Bundle budget gate (gzip JS/CSS in `apps/web/dist`) — run after build |
+| `pnpm perf` | Drag performance harness (production build, throttled CPU, touch) — needs Chromium: `pnpm --filter @ten-ten/web exec playwright install chromium` |
+| `pnpm check` | typecheck → lint → test → fallow → build → size — must pass before committing |
 
 Adding deps: `pnpm --filter @ten-ten/<pkg> add <dep>` (add `-D` for dev deps).
 pnpm enforces a minimum release age, so brand-new versions may resolve to the
@@ -102,14 +107,19 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
   `apps/web/vite.config.ts`; Vite and Vitest scripts in `apps/web` use `--configLoader runner` so the
   config can import workspace TS source — keep that flag.
 - Performance is a core requirement: avoid allocations and re-renders in drag /
-  game-loop hot paths; measure before and after optimising.
+  game-loop hot paths; measure before and after optimising (`pnpm perf`).
+  Never do expensive setup (e.g. creating an AudioContext) inside a pointer
+  handler — prepare it during idle.
+- Budgets live in `apps/web/scripts/bundle-size.ts` and `perf-drag.ts`;
+  change them only together with the brief §6b and a decision-log entry.
 
 ## Iteration checklist (run at the end of every iteration)
 
-1. `pnpm check` passes (typecheck → Biome → tests+coverage → Fallow).
+1. `pnpm check` passes (typecheck → Biome → tests+coverage → Fallow → build → bundle size).
 2. Review **warnings**, not just errors: editor LSP diagnostics, Biome warnings,
    and Fallow warnings (e.g. `private-type-leaks`, `css-*` rules). Fix them, or
    justify in place. Fallow suppressions require a reason
    (`require-suppression-reason` is on).
-3. For UI/perf-sensitive changes, check bundle size from `pnpm build` output.
+3. For changes to drag, rendering, effects or startup, run `pnpm perf` and
+   compare with the budgets in the brief §6b. Bundle size is gated by `pnpm check`.
 4. `docs/project-brief.md` and this file reflect the change.
