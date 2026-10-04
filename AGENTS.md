@@ -72,27 +72,35 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 
 ## Web app (`apps/web`) quick reference
 
-- `src/game/`: `useGame` (state), `dragController` (pointer drag, framework-agnostic),
-  `useDrag` (React binding), `boardPreview` (imperative preview), `geometry` (snapping maths).
-- `src/feedback/`: `boardEffects` (place/clear animations via cell attributes), `sound`
-  (Web Audio synth), `haptics`, `useFeedback` (orchestrates per move; sound setting).
+- `src/game/`: `use-game.ts` (state), `drag-controller.ts` (pointer drag, framework-agnostic),
+  `use-drag.ts` (React binding), `board-preview.ts` (imperative preview), `geometry.ts` (snapping maths).
+- `src/feedback/`: `board-effects.ts` (place/clear animations via cell attributes), `sound.ts`
+  (Web Audio synth), `haptics.ts`, `use-feedback.ts` (orchestrates per move; sound setting).
 - `src/storage.ts`: the only place that touches localStorage.
 - PWA: configured in `vite.config.ts` (`VitePWA`); the service worker is only
   built for production — test offline with `pnpm build` + `pnpm --filter @ten-ten/web preview`.
   Updates are applied on new game via `src/app-update.ts`; don't add auto-reload.
 - Icons: edit `public/icon.svg`, then `pnpm --filter @ten-ten/web icons` and commit the PNGs.
 - App name placeholder: `APP_NAME` in `vite.config.ts` plus `index.html` title tags.
-- `src/components/`: `BoardView` (memoised; children = 100 cells in row-major
-  order — the preview relies on this), `Tray`, `PieceView` (sized by `--pitch`), `GameOver`.
+- `src/components/`: `board-view.tsx` (memoised; children = 100 cells in row-major
+  order — the preview relies on this), `tray.tsx`, `piece-view.tsx` (sized by `--pitch`),
+  `game-over.tsx`, `sound-toggle.tsx`, `rotate-prompt.tsx`.
 - Styles are CSS Modules using token variables only.
 - Never set React state from pointermove; keep per-frame work in the controller's rAF callback.
 - Imperative cell attributes (`data-preview`, `data-clear`, `data-placed`, `data-clearing`)
-  are owned by `boardPreview` / `boardEffects`; React must not manage them. Reset them on restart.
+  are owned by `board-preview.ts` / `board-effects.ts`; React must not manage them. Reset them on restart.
 - Any new animation must respect `prefers-reduced-motion` and use duration/easing tokens.
 - Tests run in happy-dom; component tests use Testing Library.
 - UI changes: verify in a real browser at phone sizes (see brief §7, "Manual browser verification").
 
 ## Hard rules
+
+- **File names are kebab-case** (`board-view.tsx`, `use-drag.ts`,
+  `app.module.css`); exported identifiers keep normal casing (`BoardView`,
+  `useDrag`). Only tool-mandated names are exempt (`AGENTS.md`, `CLAUDE.md`,
+  `README.md`). Enforced by Biome `useFilenamingConvention`.
+- **Commits carry the author's attribution only** — no AI co-author trailers or
+  "generated with" lines in commits or PRs.
 
 - TypeScript strict mode. No `any` without a justifying comment.
 - pnpm only (no npm/yarn lockfiles).

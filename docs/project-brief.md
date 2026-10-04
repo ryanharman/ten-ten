@@ -150,7 +150,7 @@ Key principles:
   (`game/board-preview.ts`), only when the snapped cell changes. React renders
   once at drag start (ghost), once at drop (new state).
 - **Drag logic is framework-agnostic** (`game/drag-controller.ts`), with a thin
-  React binding (`useDrag`). It should port to a RN gesture handler with the
+  React binding (`use-drag.ts`). It should port to a RN gesture handler with the
   same snapping maths (`game/geometry.ts`).
 - **Layout is pure CSS:** the app column is an inline-size container (max
   `--layout-max-width`); the board area is a size container and the board is
@@ -332,3 +332,4 @@ Tooling as configured:
 | 2026-10-04 | Budgets: JS ≤ 85 KB gz, CSS ≤ 4 KB gz (gated in `pnpm check`); drag p95 ≤ 20 ms, long task ≤ 50 ms, drop→paint ≤ 50 ms @ 6× CPU (`pnpm perf`) | Measured baseline + headroom; low-end Android target |
 | 2026-10-04 | Create AudioContext during idle; resume on gesture | Removed a 120–250 ms first-touch stall |
 | 2026-10-04 | Playwright added as web dev dependency (perf harness) | Real-browser measurement; foundation for future E2E |
+| 2026-10-04 | Kebab-case file names, enforced by Biome; history rewritten to apply it | Owner's convention |
