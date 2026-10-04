@@ -1,0 +1,23 @@
+/* Shared building blocks; reuse via `composes: <class> from "../styles/shared.module.css"`. */
+
+/* A full-height app column: capped width, safe-area aware padding. */
+.screen {
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  padding: max(var(--space-4), env(safe-area-inset-top))
+    max(var(--space-4), env(safe-area-inset-right))
+    max(var(--space-4), env(safe-area-inset-bottom))
+    max(var(--space-4), env(safe-area-inset-left));
+}
+
+/* Secondary rounded button. */
+.pill {
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}

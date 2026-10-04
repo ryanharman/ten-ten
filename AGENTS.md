@@ -69,6 +69,7 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 - Drag hot paths (must stay allocation-free): `canPlace`, `previewLines`.
 - Lines are a packed `LineMask` number — decode with `rowsOf` / `colsOf` / `countLines`.
 - Scoring is pluggable via `GameRules.scoring`; piece odds via `GameRules.deck`.
+- Persistence: `serializeGame(state)` / `deserializeGame(data)` (versioned; returns `null` if invalid).
 - Tests sit next to source (`*.test.ts`); board fixtures use ASCII art via `src/test-utils.ts`.
 - Details & rationale: `docs/project-brief.md` §4.
 
@@ -79,6 +80,11 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 - `src/feedback/`: `board-effects.ts` (place/clear animations via cell attributes), `sound.ts`
   (Web Audio synth), `haptics.ts`, `use-feedback.ts` (orchestrates per move; sound setting).
 - `src/storage.ts`: the only place that touches localStorage.
+- `src/runs/`: `run-recorder.ts` (per-move samples, run summaries), `run-store.ts`
+  (session + history persistence with validation), `deferred-writer.ts` (idle saves),
+  `format.ts`. `use-game.ts` ties these to the game state.
+- Changing `SavedGame` (core) or the stored session/run shapes: bump the
+  version (`v`) and keep loading tolerant — invalid data must fall back to a fresh game.
 - Deploys: pushing to `main` deploys to https://tenten.ryanharman.dev via Cloudflare
   Workers Builds. Cache/security headers live in `public/_headers` — keep entry
   points (`sw.js`, `index.html`, manifest) `no-cache` or updates get stuck.
@@ -90,7 +96,10 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 - `src/components/`: `board-view.tsx` (memoised; children = 100 cells in row-major
   order — the preview relies on this), `tray.tsx`, `piece-view.tsx` (sized by `--pitch`),
   `game-over.tsx`, `sound-toggle.tsx`, `rotate-prompt.tsx`.
-- Styles are CSS Modules using token variables only.
+- Styles are CSS Modules using token variables only. Shared blocks (`.screen`,
+  `.pill`) live in `src/styles/shared.module.css` and are reused with
+  `composes: … from`. Fallow can't see `composes`, so `src/styles/*.module.css`
+  is listed under `entry` in `.fallowrc.json`.
 - Never set React state from pointermove; keep per-frame work in the controller's rAF callback.
 - Imperative cell attributes (`data-preview`, `data-clear`, `data-placed`, `data-clearing`)
   are owned by `board-preview.ts` / `board-effects.ts`; React must not manage them. Reset them on restart.

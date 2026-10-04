@@ -171,7 +171,23 @@ Key principles:
   phrase on game over; mute toggle persisted. Haptics via the Vibration API
   (Android only; iOS Safari has none — native haptics come with RN).
 - **Persistence:** `src/storage.ts` wraps localStorage (namespaced `ten-ten:`,
-  failure-tolerant). Stores best score and sound setting.
+  failure-tolerant). Keys: `session` (game in progress + current run), `runs`
+  (history), `best`, `sound`.
+- **Game in progress survives reloads.** `serializeGame` / `deserializeGame`
+  in `packages/core` give a versioned, JSON-safe snapshot (colours, tray piece
+  ids, score, streak, RNG state); occupancy and `isOver` are recomputed on
+  load, and anything invalid yields `null` → fresh game. RNG state is saved,
+  so reloading can't reroll the next pieces. Saves are deferred to idle time
+  (`runs/deferred-writer.ts`) and flushed on `pagehide` / hidden, keeping
+  storage work off the drop → paint path.
+- **Run history (`src/runs/`).** Each run records compact per-move samples
+  `[ms since previous move, points, lines]`; at game over it is archived as
+  `completed`, and Restart mid-game archives it as `abandoned` (shown as
+  "quit"). Records hold score, moves, lines, best streak, active time (idle
+  gaps > 60 s capped) and the samples — enough for future per-run charts
+  without a format change. Last 100 runs kept (~2 KB each). The **Runs**
+  panel (header button, or "See runs" at game over) shows games / best /
+  average (completed runs), top 5 scores and the 20 most recent runs.
 - **PWA (`vite-plugin-pwa`, Workbox `generateSW`):** installable
   (`display: standalone`, `orientation: portrait`), whole app precached for
   offline play. Manifest colours come from tokens; `theme-color` metas for
@@ -224,12 +240,17 @@ drags a piece across the board for ~3 s, drops it, and reports frame
 percentiles, long tasks and drop latency. It is not in `pnpm check` (needs a
 browser, ~10 s); run it for any change to drag, rendering, effects or startup.
 
+Perf runs are slightly noisy; the first run after a build is often slower
+(cold start). Run `pnpm perf` 2–3 times and judge the typical result.
+
 **Findings so far:**
 
 - Dragging holds a steady 60 fps (p50 & p95 16.7 ms) even at 6× slowdown.
 - Creating the Web Audio `AudioContext` on first touch caused a **120–250 ms
   long task** that froze the start of the first drag. Fixed by creating it
   during idle after load and only `resume()`-ing it in the gesture.
+- Synchronous session saves on every drop pushed drop→paint over budget in
+  a cold run; saves are now deferred to idle (flushed on page hide).
 - React + ReactDOM are ~60 of the 75 KB JS. If the budget tightens, Preact
   (`preact/compat`) is the obvious lever.
 
@@ -292,6 +313,7 @@ Tooling as configured:
 | Q5 | Concrete performance budgets | Resolved — see §6b |
 | Q6 | Final name (placeholder "ten-ten" + block icon in use) | Open |
 | Q7 | User-selectable themes, colour-blind palettes | Deferred (post-POC) |
+| Q8 | Charts of per-run performance (score over moves, run comparisons) | Deferred — data already recorded (`RunRecord.samples`) |
 
 ## 10. Delivery
 
@@ -349,3 +371,5 @@ Tooling as configured:
 | 2026-10-04 | Kebab-case file names, enforced by Biome; history rewritten to apply it | Owner's convention |
 | 2026-10-04 | CI on GitHub Actions running `pnpm check` | Checks can't be skipped |
 | 2026-10-04 | Host on Cloudflare Workers static assets at tenten.ryanharman.dev, deployed via Workers Builds | DNS already on Cloudflare; HTTPS for PWA; control over cache headers |
+| 2026-10-04 | Persist game in progress (versioned core snapshot) + run history (last 100, per-move samples); abandoned runs recorded | Progress survives reloads; data ready for charts |
+| 2026-10-04 | Session saves deferred to idle, flushed on page hide | Keep storage off the drop → paint path |
