@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "workspaces": {
+    "patterns": ["apps/*", "packages/*"]
+  },
+  "rules": {
+    "unused-dev-dependencies": "error",
+    "unused-optional-dependencies": "error",
+    "unused-component-props": "error",
+    "type-only-dependencies": "error",
+    "test-only-dependencies": "error",
+    "dev-dependencies-in-production": "error",
+    "re-export-cycle": "error",
+    "package-cycle": "error",
+    "stale-suppressions": "error",
+    "require-suppression-reason": "error",
+    "private-type-leaks": "warn"
+  },
+  "boundaries": {
+    "zones": [
+      { "name": "core", "patterns": ["packages/core/**"] },
+      { "name": "web", "patterns": ["apps/web/**"] }
+    ],
+    "rules": [
+      { "from": "core", "allow": [] },
+      { "from": "web", "allow": ["core"] }
+    ]
+  }
+}

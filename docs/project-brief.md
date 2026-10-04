@@ -135,7 +135,9 @@ Target: **any mobile phone**, so we design for low-end Android as the baseline.
 
 - Smooth drag (aim 60fps) on low-end devices; no per-frame React renders.
 - No allocations in drag/placement hot paths; precomputed piece & line masks.
-- Small initial bundle (budget to be set once scaffolded and measured).
+- Small initial bundle (budget to be set once the game exists).
+  Baseline after scaffolding: **~69 KB gzip JS**, nearly all React + ReactDOM.
+  If bundle size becomes a problem, Preact (via `preact/compat`) is an option.
 
 ## 7. Quality workflow (every iteration)
 
@@ -147,21 +149,42 @@ Each iteration cycle ends with reviewing and actioning:
    actioned or explicitly justified.
 4. Tests for `packages/core` pass.
 
-Exact commands live in `AGENTS.md` once the workspace is scaffolded.
+Single command: `pnpm check`. Details and commands live in `AGENTS.md`.
 
-## 8. Open questions
+Tooling as configured:
+
+- **TypeScript 7** (native compiler), strict + `noUncheckedIndexedAccess`,
+  `exactOptionalPropertyTypes`, `verbatimModuleSyntax`.
+- **Biome 2** — recommended preset + React and test domains; `noExplicitAny`
+  and `noNonNullAssertion` are errors. 2-space indent, double quotes.
+- **Fallow 3** — all warn-by-default cleanup rules promoted to error (strict);
+  `private-type-leaks` enabled as warn; suppressions must state a reason;
+  architecture **boundaries** enforce `core → nothing`, `web → core`.
+- **Vitest 5** for unit tests.
+
+## 8. Roadmap
+
+| Step | Scope | Status |
+|---|---|---|
+| 1 | Tooling & workspace: pnpm workspace, TS base config, Biome, Fallow, Vitest, `pnpm check` | Done |
+| 2 | `packages/core`: board (bitboard/typed array), piece set, seeded RNG, deal/fit/place/clear/game-over, pluggable scoring, tests | Next |
+| 3 | `packages/tokens`: design tokens + light/dark themes, emitted as CSS custom properties | — |
+| 4 | `apps/web`: responsive board with safe areas, pointer-driven drag (no per-frame React renders), ghost preview, clear animations, score + local high score, sound, haptics, PWA, portrait lock | — |
+| 5 | Measure: bundle + drag perf on low-end device; set concrete budgets | — |
+
+## 9. Open questions
 
 | # | Question | Status |
 |---|---|---|
 | Q1 | Scoring model | TBD (intentionally deferred; loop supports pluggable scoring) |
 | Q2 | Piece distribution / weighting | Open — tune via playtesting |
-| Q3 | Test stack (proposed: Vitest for core, Playwright for web E2E) | Proposed |
+| Q3 | Web E2E testing (Playwright?) — Vitest chosen for unit tests | Open |
 | Q4 | Hosting (likely subdomain of owner's personal domain) | Deferred |
 | Q5 | Concrete performance budgets (bundle size, frame time) | Set after scaffolding + first measurement |
 | Q6 | Final name | Open |
 | Q7 | User-selectable themes, colour-blind palettes | Deferred (post-POC) |
 
-## 9. Decision log
+## 10. Decision log
 
 | Date | Decision | Rationale |
 |---|---|---|
@@ -173,4 +196,7 @@ Exact commands live in `AGENTS.md` once the workspace is scaffolded.
 | 2026-10-04 | POC scope: local high score, sound + haptics (nice to have), portrait only, offline PWA | Confirmed by owner |
 | 2026-10-04 | Performance baseline: any mobile phone (design for low-end Android) | Confirmed by owner |
 | 2026-10-04 | Theming is internal-only for POC | Confirmed by owner |
-| 2026-10-04 | Use latest pnpm, pinned via `packageManager` | Local pnpm 7.33 is outdated |
+| 2026-10-04 | Use latest pnpm, pinned via `packageManager` (12.9.1) | Local pnpm 7.33 is outdated |
+| 2026-10-04 | TypeScript 7, Biome 2, Fallow 3 (strict), Vitest 5, Vite 8, React 19 | Latest stable versions at scaffold time |
+| 2026-10-04 | Workspace packages consumed as TS source (no package build step) | Simpler, faster; Vite & Vitest compile TS directly |
+| 2026-10-04 | Fallow strict mode + architecture boundaries | Owner wants warnings actioned every iteration; enforce pure core |
