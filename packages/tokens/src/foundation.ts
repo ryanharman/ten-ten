@@ -17,7 +17,15 @@ export const foundation = {
   fontSize: { xs: 12, sm: 14, md: 16, lg: 20, xl: 28, xxl: 40 },
   fontWeight: { regular: 400, medium: 500, bold: 700 },
   lineHeight: { tight: 1.1, normal: 1.4 },
-  duration: { instant: 80, fast: 150, normal: 250, slow: 400, stagger: 25 },
+  duration: {
+    instant: 80,
+    fast: 150,
+    normal: 250,
+    slow: 400,
+    stagger: 25,
+    /** How long a score popup stays readable. */
+    linger: 1200,
+  },
   easing: {
     standard: [0.2, 0, 0, 1],
     out: [0, 0, 0.2, 1],

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
 import { formatDate, formatDuration } from "../runs/format";
 import type { RunRecord } from "../runs/run-recorder";
 import { topRuns } from "../runs/run-store";
 import styles from "./runs-panel.module.css";
+import { Sheet } from "./sheet";
 
 const TOP_COUNT = 5;
 const RECENT_COUNT = 20;
@@ -114,38 +114,8 @@ const RECENT_COLUMNS: readonly Column[] = [
 
 /** Full-screen sheet with stats, top scores and recent runs. */
 export function RunsPanel({ history, onClose }: RunsPanelProps) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  // Move focus into the dialog when it opens.
-  useEffect(() => closeRef.current?.focus(), []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   return (
-    <div
-      className={styles.sheet}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="runs-title"
-    >
-      <header className={styles.header}>
-        <h2 id="runs-title" className={styles.title}>
-          Runs
-        </h2>
-        <button
-          ref={closeRef}
-          type="button"
-          className={styles.close}
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </header>
+    <Sheet title="Runs" onClose={onClose}>
       {history.length === 0 ? (
         <p className={styles.empty}>
           No runs yet — finish a game to see it here.
@@ -165,6 +135,6 @@ export function RunsPanel({ history, onClose }: RunsPanelProps) {
           />
         </>
       )}
-    </div>
+    </Sheet>
   );
 }

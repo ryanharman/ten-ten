@@ -94,10 +94,10 @@ try {
 
   const geo = await page.evaluate(() => {
     const board = document
-      .querySelector("main > div:nth-of-type(1) > div")
+      .querySelector("main > div:nth-of-type(2) > div")
       ?.getBoundingClientRect();
     const slot = document
-      .querySelector("main > div:nth-of-type(2) > div")
+      .querySelector("main > div:nth-of-type(3) > div")
       ?.getBoundingClientRect();
     if (!board || !slot) throw new Error("layout not found");
     return {

@@ -8,16 +8,12 @@ import {
   placeOnBoard,
   rowsOf,
 } from "./board";
+import type { DealAssist, WeightedPiece } from "./deal";
+import { boardFill, dealTray } from "./deal";
 import type { Piece } from "./pieces";
 import { PIECES } from "./pieces";
-import { nextRandom } from "./rng";
-import type { ScoringRule } from "./scoring";
-import { classicScoring } from "./scoring";
-
-export interface WeightedPiece {
-  readonly piece: Piece;
-  readonly weight: number;
-}
+import type { MoveScore, ScoringRule } from "./scoring";
+import { comboScoring } from "./scoring";
 
 export interface GameRules {
   /** Pieces that can be dealt, with relative probabilities. */
@@ -25,12 +21,21 @@ export interface GameRules {
   /** Pieces dealt per round; a new round is dealt once all are placed. */
   readonly traySize: number;
   readonly scoring: ScoringRule;
+  /**
+   * Placements allowed after a clear for the next clear to extend the combo.
+   * 1 means every placement must clear.
+   */
+  readonly comboWindow: number;
+  /** Re-draws unplaceable trays while the board isn't too full; omit for purely random deals. */
+  readonly assist?: DealAssist | undefined;
 }
 
 export const DEFAULT_RULES: GameRules = {
   deck: PIECES.map((piece) => ({ piece, weight: 1 })),
   traySize: 3,
-  scoring: classicScoring,
+  scoring: comboScoring,
+  comboWindow: 3,
+  assist: { maxFill: 70, attempts: 8, searchBudget: 600, misfitWeight: 0.25 },
 };
 
 /** Tray slot: a piece waiting to be placed, or `null` once used. */
@@ -40,8 +45,10 @@ export interface GameState {
   readonly board: Board;
   readonly tray: readonly TraySlot[];
   readonly score: number;
-  /** Consecutive placements that cleared at least one line. */
-  readonly streak: number;
+  /** Clearing moves in the current combo; 0 when no combo is live. */
+  readonly combo: number;
+  /** Placements left to clear a line before the combo ends; 0 when no combo is live. */
+  readonly comboMovesLeft: number;
   readonly rngState: number;
   readonly isOver: boolean;
 }
@@ -52,7 +59,7 @@ export interface MoveEvent {
   readonly row: number;
   readonly col: number;
   readonly lines: LineMask;
-  readonly points: number;
+  readonly score: MoveScore;
   /** True if the tray was emptied and a new round dealt. */
   readonly dealt: boolean;
 }
@@ -66,12 +73,14 @@ export function newGame(
   seed: number,
   rules: GameRules = DEFAULT_RULES,
 ): GameState {
-  const { tray, rngState } = dealTray(seed | 0, rules);
+  const board = createBoard();
+  const { tray, rngState } = deal(seed | 0, board, rules);
   return {
-    board: createBoard(),
+    board,
     tray,
     score: 0,
-    streak: 0,
+    combo: 0,
+    comboMovesLeft: 0,
     rngState,
     isOver: false,
   };
@@ -93,30 +102,45 @@ export function placePiece(
     return null;
 
   const { board, lines } = placeOnBoard(state.board, piece, row, col);
-  const streak = lines === 0 ? 0 : state.streak + 1;
-  const points = rules.scoring({
+  const { combo, comboMovesLeft } = nextCombo(state, lines !== 0, rules);
+  const score = rules.scoring({
     cellsPlaced: piece.cells.length,
     rowsCleared: popcount(rowsOf(lines)),
     colsCleared: popcount(colsOf(lines)),
-    streak,
+    combo: lines === 0 ? 0 : combo,
+    boardCleared: lines !== 0 && boardFill(board) === 0,
   });
 
   let tray = state.tray.map((slot, i) => (i === trayIndex ? null : slot));
   let rngState = state.rngState;
   const dealt = tray.every((slot) => slot === null);
-  if (dealt) ({ tray, rngState } = dealTray(rngState, rules));
+  if (dealt) ({ tray, rngState } = deal(rngState, board, rules));
 
   return {
     state: {
       board,
       tray,
-      score: state.score + points,
-      streak,
+      score: state.score + score.total,
+      combo,
+      comboMovesLeft,
       rngState,
       isOver: !hasAnyMove(board, tray),
     },
-    event: { piece, row, col, lines, points, dealt },
+    event: { piece, row, col, lines, score, dealt },
   };
+}
+
+function nextCombo(
+  state: GameState,
+  cleared: boolean,
+  rules: GameRules,
+): Pick<GameState, "combo" | "comboMovesLeft"> {
+  if (cleared) {
+    const combo = state.comboMovesLeft > 0 ? state.combo + 1 : 1;
+    return { combo, comboMovesLeft: rules.comboWindow };
+  }
+  const comboMovesLeft = Math.max(0, state.comboMovesLeft - 1);
+  return { combo: comboMovesLeft > 0 ? state.combo : 0, comboMovesLeft };
 }
 
 /** Whether any piece in the tray can still be placed. */
@@ -124,28 +148,10 @@ export function hasAnyMove(board: Board, tray: readonly TraySlot[]): boolean {
   return tray.some((piece) => piece !== null && canPlaceAnywhere(board, piece));
 }
 
-function dealTray(
+function deal(
   rngState: number,
+  board: Board,
   rules: GameRules,
 ): { tray: TraySlot[]; rngState: number } {
-  const totalWeight = rules.deck.reduce((sum, entry) => sum + entry.weight, 0);
-  const tray: TraySlot[] = [];
-  let state = rngState;
-  for (let i = 0; i < rules.traySize; i++) {
-    const step = nextRandom(state);
-    state = step.state;
-    tray.push(pickWeighted(rules.deck, step.value * totalWeight));
-  }
-  return { tray, rngState: state };
-}
-
-function pickWeighted(deck: readonly WeightedPiece[], target: number): Piece {
-  let remaining = target;
-  for (const entry of deck) {
-    remaining -= entry.weight;
-    if (remaining < 0) return entry.piece;
-  }
-  const last = deck[deck.length - 1];
-  if (!last) throw new Error("Game rules have an empty deck");
-  return last.piece;
+  return dealTray(rngState, board, rules.traySize, rules.deck, rules.assist);
 }

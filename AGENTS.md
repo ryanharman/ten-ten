@@ -18,9 +18,9 @@ Guidance for AI agents (and humans) working in this repo.
 ## Project status
 
 POC roadmap (steps 1–5) complete: installable, offline web game with animations,
-sound, haptics, high score, and enforced performance budgets. Next work is
-driven by the open questions in `docs/project-brief.md` §9 (scoring, piece
-weights, hosting, name, E2E tests).
+sound, haptics, high score, and enforced performance budgets. Assisted dealing
+and combo scoring are in (brief §4b). Next work is driven by the open questions
+in `docs/project-brief.md` §9 (scoring/dealing tuning, name, E2E tests).
 See `docs/project-brief.md` §8 for the roadmap.
 
 ## Repo layout
@@ -67,8 +67,14 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 
 - Entry: `newGame(seed, rules?)` → `GameState`; `placePiece(state, trayIndex, row, col, rules?)` → `{ state, event } | null`.
 - Drag hot paths (must stay allocation-free): `canPlace`, `previewLines`.
+  `canPlaceAnywhere` and the deal solver (`canPlaceAll` in `deal.ts`) run on
+  the drop path: keep them allocation-free too, and bench (`deal.bench.ts`).
 - Lines are a packed `LineMask` number — decode with `rowsOf` / `colsOf` / `countLines`.
-- Scoring is pluggable via `GameRules.scoring`; piece odds via `GameRules.deck`.
+- Scoring is pluggable via `GameRules.scoring` (returns a `MoveScore` breakdown);
+  combo window via `GameRules.comboWindow`; piece odds via `GameRules.deck`;
+  assisted dealing via `GameRules.assist`.
+- Scoring values live in `SCORING` (`scoring.ts`); the app's "How to score"
+  sheet renders them, so change the numbers there, not in the UI.
 - Persistence: `serializeGame(state)` / `deserializeGame(data)` (versioned; returns `null` if invalid).
 - Tests sit next to source (`*.test.ts`); board fixtures use ASCII art via `src/test-utils.ts`.
 - Details & rationale: `docs/project-brief.md` §4.
@@ -95,7 +101,10 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
 - App name placeholder: `APP_NAME` in `vite.config.ts` plus `index.html` title tags.
 - `src/components/`: `board-view.tsx` (memoised; children = 100 cells in row-major
   order — the preview relies on this), `tray.tsx`, `piece-view.tsx` (sized by `--pitch`),
-  `game-over.tsx`, `sound-toggle.tsx`, `rotate-prompt.tsx`.
+  `game-over.tsx`, `sound-toggle.tsx`, `rotate-prompt.tsx`, `sheet.tsx` (shared
+  full-screen dialog), `runs-panel.tsx`, `status-bar.tsx` (combo meter + scoring help),
+  `scoring-help.tsx`, `combo-meter.tsx`,
+  `score-popup.tsx` (remounted per clear via `key`; ends transparent).
 - Styles are CSS Modules using token variables only. Shared blocks (`.screen`,
   `.pill`) live in `src/styles/shared.module.css` and are reused with
   `composes: … from`. Fallow can't see `composes`, so `src/styles/*.module.css`

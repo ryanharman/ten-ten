@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newGame, placePiece } from "./game";
+import { DEFAULT_RULES, newGame, placePiece } from "./game";
 import { deserializeGame, serializeGame } from "./serialize";
 import { boardFromAscii } from "./test-utils";
 
@@ -32,6 +32,8 @@ describe("serializeGame / deserializeGame", () => {
       state.tray.map((p) => p?.id ?? null),
     );
     expect(restored?.score).toBe(state.score);
+    expect(restored?.combo).toBe(state.combo);
+    expect(restored?.comboMovesLeft).toBe(state.comboMovesLeft);
     expect(restored?.rngState).toBe(state.rngState);
   });
 
@@ -50,6 +52,15 @@ describe("serializeGame / deserializeGame", () => {
     );
   });
 
+  it("loads version 1 saves, treating the streak as a live combo", () => {
+    const { combo, comboMovesLeft, ...rest } = serializeGame(newGame(3));
+    const restored = deserializeGame({ ...rest, v: 1, streak: 2 });
+    expect(restored?.combo).toBe(2);
+    expect(restored?.comboMovesLeft).toBe(DEFAULT_RULES.comboWindow);
+    const noStreak = deserializeGame({ ...rest, v: 1, streak: 0 });
+    expect(noStreak?.comboMovesLeft).toBe(0);
+  });
+
   it("recomputes game over instead of trusting the save", () => {
     const state = {
       ...newGame(1),
@@ -61,7 +72,9 @@ describe("serializeGame / deserializeGame", () => {
 
   it.each([
     ["null", null],
-    ["wrong version", { ...serializeGame(newGame(1)), v: 2 }],
+    ["wrong version", { ...serializeGame(newGame(1)), v: 3 }],
+    ["missing combo", { ...serializeGame(newGame(1)), combo: undefined }],
+    ["v1 without streak", { ...serializeGame(newGame(1)), v: 1 }],
     ["short board", { ...serializeGame(newGame(1)), colours: [0, 0] }],
     [
       "bad colour",

@@ -14,9 +14,9 @@ describe("App", () => {
   it("renders an empty board, a score of 0 and three tray pieces", () => {
     const { container } = render(<App />);
     expect(screen.getByLabelText("Score").textContent).toBe("0");
-    const board = container.querySelector("main > div:nth-of-type(1) > div");
+    const board = container.querySelector("main > div:nth-of-type(2) > div");
     expect(board?.children).toHaveLength(BOARD_SIZE * BOARD_SIZE);
-    const tray = container.querySelector("main > div:nth-of-type(2)");
+    const tray = container.querySelector("main > div:nth-of-type(3)");
     expect(tray?.children).toHaveLength(3);
   });
 
@@ -54,7 +54,7 @@ describe("App", () => {
       String(moved.state.score),
     );
     const filled = [
-      ...(container.querySelector("main > div:nth-of-type(1) > div")
+      ...(container.querySelector("main > div:nth-of-type(2) > div")
         ?.children ?? []),
     ].filter((cell) =>
       (cell as HTMLElement).style.getPropertyValue("--cell-colour"),
@@ -79,5 +79,22 @@ describe("App", () => {
     ).toBe(0);
     fireEvent.click(screen.getByRole("button", { name: "Runs" }));
     expect(screen.getByRole("table", { name: "Recent runs" })).toBeTruthy();
+  });
+
+  it("shows a live combo and explains scoring", () => {
+    const moved = placePiece(newGame(5), 0, 0, 0);
+    if (!moved) throw new Error("move should be legal");
+    saveSession({
+      state: { ...moved.state, combo: 2, comboMovesLeft: 1 },
+      run: recordMove(startRun(0, 0), moved.event, 10),
+    });
+    render(<App />);
+    expect(
+      screen.getByRole("status", { name: /^Combo ×3/ }).textContent,
+    ).toContain("×3");
+    fireEvent.click(screen.getByRole("button", { name: "How to score" }));
+    expect(screen.getByRole("dialog", { name: "How to score" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

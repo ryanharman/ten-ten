@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Board } from "./board";
 import {
   canPlace,
   canPlaceAnywhere,
@@ -10,6 +11,9 @@ import {
   rowsOf,
 } from "./board";
 import { BOARD_SIZE } from "./constants";
+import type { Piece } from "./pieces";
+import { PIECES } from "./pieces";
+import { nextRandom } from "./rng";
 import { boardFromAscii, boardToAscii, pieceById } from "./test-utils";
 
 const EMPTY_ROW = "..........";
@@ -38,6 +42,30 @@ describe("canPlace", () => {
   });
 });
 
+/** Each cell is occupied with probability `density`. */
+function randomBoard(seed: number, density: number): Board {
+  const board = createBoard();
+  let rng = seed;
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const next = nextRandom(rng);
+      rng = next.state;
+      if (next.value < density)
+        board.occupancy[r] = (board.occupancy[r] ?? 0) | (1 << c);
+    }
+  }
+  return board;
+}
+
+function fitsByTrying(board: Board, piece: Piece): boolean {
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (canPlace(board, piece, r, c)) return true;
+    }
+  }
+  return false;
+}
+
 describe("canPlaceAnywhere", () => {
   it("is false when no gap is large enough", () => {
     const checkerboard = Array.from({ length: BOARD_SIZE }, (_, r) =>
@@ -47,6 +75,15 @@ describe("canPlaceAnywhere", () => {
     expect(canPlaceAnywhere(board, pieceById("dot"))).toBe(true);
     expect(canPlaceAnywhere(board, pieceById("line2-h"))).toBe(false);
     expect(canPlaceAnywhere(board, pieceById("line2-v"))).toBe(false);
+  });
+
+  it("agrees with trying every cell, on random boards", () => {
+    for (let trial = 0; trial < 200; trial++) {
+      const board = randomBoard(trial + 1, (trial % 10) / 10);
+      for (const piece of PIECES) {
+        expect(canPlaceAnywhere(board, piece)).toBe(fitsByTrying(board, piece));
+      }
+    }
   });
 });
 

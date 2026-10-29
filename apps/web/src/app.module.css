@@ -11,18 +11,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-2);
 }
 
+/* Best sits under the score so five-digit scores still fit beside the buttons. */
 .scores {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
+  display: grid;
 }
 
 .best {
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .actions {
@@ -45,6 +46,7 @@
 
 /* Size container: the board takes the largest square that fits. */
 .boardArea {
+  position: relative;
   container-type: size;
   flex: 1;
   min-height: 0;
