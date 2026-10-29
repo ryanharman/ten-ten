@@ -103,8 +103,7 @@ Never add runtime dependencies to `packages/core` without logging a decision in 
   order — the preview relies on this), `tray.tsx`, `piece-view.tsx` (sized by `--pitch`),
   `game-over.tsx`, `sound-toggle.tsx`, `rotate-prompt.tsx`, `sheet.tsx` (shared
   full-screen dialog), `runs-panel.tsx`, `status-bar.tsx` (combo meter + scoring help),
-  `scoring-help.tsx`, `combo-meter.tsx`,
-  `score-popup.tsx` (remounted per clear via `key`; ends transparent).
+  `scoring-help.tsx`, `combo-meter.tsx`.
 - Styles are CSS Modules using token variables only. Shared blocks (`.screen`,
   `.pill`) live in `src/styles/shared.module.css` and are reused with
   `composes: … from`. Fallow can't see `composes`, so `src/styles/*.module.css`
