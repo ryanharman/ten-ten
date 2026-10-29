@@ -23,8 +23,6 @@ export const foundation = {
     normal: 250,
     slow: 400,
     stagger: 25,
-    /** How long a score popup stays readable. */
-    linger: 1200,
   },
   easing: {
     standard: [0.2, 0, 0, 1],

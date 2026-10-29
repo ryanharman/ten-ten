@@ -154,11 +154,10 @@ clear just one, so n² makes setting up multi-line clears worth a lot. A strict
 window lets combos reach 3–6 with deliberate play, a learnable target. Board
 clears are rare, so the bonus is an aspiration rather than a strategy.
 
-**Explaining it in the app:** a score popup on every clearing move (`+124`,
-with "2 lines · Combo ×3 · All clear +300" as applicable), a combo meter under
-the score (next multiplier, plus a pip per placement left in the window), and
-a "How to score" sheet whose numbers are generated from `SCORING`, so it can't
-drift from the engine.
+**Explaining it in the app:** a combo meter under the score (next multiplier,
+plus a pip per placement left in the window) and a "How to score" sheet whose
+numbers are generated from `SCORING`, so it can't drift from the engine. There
+is no per-move points popup: the owner found it noisy.
 
 ## 5. Theming & design system
 
@@ -236,13 +235,9 @@ Key principles:
   click on place, pentatonic run on clear (longer for more lines), falling
   phrase on game over; mute toggle persisted. Haptics via the Vibration API
   (Android only; iOS Safari has none — native haptics come with RN).
-- **Scoring feedback:** `components/score-popup.tsx` (fades in over the
-  board on clears; remounted per clear via `key` and ends transparent, so it
-  never needs a render to hide; motion-free fade under reduced motion),
-  `combo-meter.tsx` and `scoring-help.tsx` (shares `sheet.tsx` with the Runs
-  panel), grouped in `status-bar.tsx` under the header. The popup state is set in the same handler as the move, so a drop
-  still renders once. "Best" sits under the score so 5-digit scores fit at
-  320 px.
+- **Scoring feedback:** `components/combo-meter.tsx` and `scoring-help.tsx`
+  (shares `sheet.tsx` with the Runs panel), grouped in `status-bar.tsx` under
+  the header. "Best" sits under the score so 5-digit scores fit at 320 px.
 - **Persistence:** `src/storage.ts` wraps localStorage (namespaced `ten-ten:`,
   failure-tolerant). Keys: `session` (game in progress + current run), `runs`
   (history), `best`, `sound`.
@@ -302,8 +297,8 @@ Target: **any mobile phone**, so we design for low-end Android as the baseline.
 
 | Budget | Limit | Current (2026-10-29) | Enforced by |
 |---|---|---|---|
-| Shipped JS (gzip, all chunks) | 85 KB | 79.9 KB | `pnpm size` (part of `pnpm check`) |
-| Shipped CSS (gzip) | 4 KB | 3.1 KB | `pnpm size` |
+| Shipped JS (gzip, all chunks) | 85 KB | 79.6 KB | `pnpm size` (part of `pnpm check`) |
+| Shipped CSS (gzip) | 4 KB | 2.9 KB | `pnpm size` |
 | Drag p95 frame time @ 6× CPU slowdown | ≤ 20 ms | 16.8 ms | `pnpm perf` |
 | Longest main-thread task during play @ 6× | ≤ 50 ms | 0 (none) | `pnpm perf` |
 | Drop → next painted frame @ 6× | ≤ 50 ms | ~30–38 ms (≈ 2 frames); 28–35 ms when the drop triggers an assisted deal on an adversarial board | `pnpm perf` |
@@ -451,5 +446,5 @@ Tooling as configured:
 | 2026-10-29 | Assisted dealing below 70 % fill: re-draw trays that can't all be placed (bounded solver, 600 placements/deal), down-weight pieces that don't fit | Simulation: 53–57 % of game overs were unplaceable trays at ~55 % fill; now 4–10 % |
 | 2026-10-29 | Combo scoring: 1/square, 10 × n² for n lines, ×combo (clear within 3 placements, cap ×5), +300 all clear; `ScoringRule` returns a `MoveScore` breakdown | Rewards multi-line set-ups, sustained clearing and clean boards; breakdown lets the UI explain points |
 | 2026-10-29 | `GameState.streak` replaced by `combo` + `comboMovesLeft`; `SavedGame` v2, v1 still loads | Combo window needs move tracking; keep games in progress across the update |
-| 2026-10-29 | Score popup, combo meter and generated "How to score" sheet | Scoring must be clear in the app; one source of truth for values |
+| 2026-10-29 | Combo meter and generated "How to score" sheet; no per-move points popup | Scoring must be clear in the app; one source of truth for values; owner found a "+N" popup noisy |
 | 2026-10-29 | `canPlaceAnywhere` tests a row of columns at once with bitmasks | ~9× faster; the deal solver, tray dimming and game-over checks all call it |
