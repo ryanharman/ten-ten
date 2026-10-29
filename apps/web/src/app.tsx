@@ -6,9 +6,12 @@ import { GameOver } from "./components/game-over";
 import { PieceView } from "./components/piece-view";
 import { RotatePrompt } from "./components/rotate-prompt";
 import { RunsPanel } from "./components/runs-panel";
+import { ScorePopup } from "./components/score-popup";
 import { SoundToggle } from "./components/sound-toggle";
+import { StatusBar } from "./components/status-bar";
 import { Tray } from "./components/tray";
 import { cssVars } from "./css-vars";
+import { useClearPopup } from "./feedback/use-clear-popup";
 import { useFeedback } from "./feedback/use-feedback";
 import { useDrag } from "./game/use-drag";
 import { useGame } from "./game/use-game";
@@ -18,6 +21,7 @@ export function App() {
     useGame();
   const [showRuns, setShowRuns] = useState(false);
   const closeRuns = useCallback(() => setShowRuns(false), []);
+  const { popup, show: showPopup, hide: hidePopup } = useClearPopup();
   const boardRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const trayRef = useRef<HTMLDivElement>(null);
@@ -28,9 +32,11 @@ export function App() {
     (trayIndex: number, row: number, col: number) => {
       const before = getState().board;
       const result = place(trayIndex, row, col);
-      if (result) onMove(before, result.event, result.state.isOver);
+      if (!result) return;
+      onMove(before, result.event, result.state.isOver);
+      showPopup(result.event);
     },
-    [getState, place, onMove],
+    [getState, place, onMove, showPopup],
   );
 
   const { drag, onSlotPointerDown, cancelDrag } = useDrag({
@@ -46,6 +52,7 @@ export function App() {
     if (applyPendingUpdate()) return;
     cancelDrag();
     resetEffects();
+    hidePopup();
     restart();
   };
 
@@ -75,8 +82,13 @@ export function App() {
         </div>
       </header>
 
+      <StatusBar combo={state.combo} comboMovesLeft={state.comboMovesLeft} />
+
       <div className={styles.boardArea}>
         <BoardView ref={boardRef} board={state.board} />
+        {popup && (
+          <ScorePopup key={popup.id} score={popup.score} lines={popup.lines} />
+        )}
       </div>
 
       <Tray

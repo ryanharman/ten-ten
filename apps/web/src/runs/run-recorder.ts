@@ -57,7 +57,7 @@ export function recordMove(
 ): CurrentRun {
   const sample: MoveSample = [
     Math.max(0, now - run.lastMoveAt),
-    event.points,
+    event.score.total,
     countLines(event.lines),
   ];
   return { ...run, lastMoveAt: now, samples: [...run.samples, sample] };

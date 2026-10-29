@@ -60,12 +60,24 @@ export function canPlace(
   return true;
 }
 
-/** Whether `piece` fits anywhere on the board. */
+/**
+ * Whether `piece` fits anywhere on the board. Tests every column of a row at
+ * once: bit `c` of the mask survives if the piece fits with its left edge at
+ * column `c`. Allocation-free.
+ */
 export function canPlaceAnywhere(board: Board, piece: Piece): boolean {
+  const columns = (1 << (BOARD_SIZE - piece.width + 1)) - 1;
   for (let row = 0; row <= BOARD_SIZE - piece.height; row++) {
-    for (let col = 0; col <= BOARD_SIZE - piece.width; col++) {
-      if (canPlace(board, piece, row, col)) return true;
+    let fits = columns;
+    for (let i = 0; i < piece.height && fits !== 0; i++) {
+      const free = ~(board.occupancy[row + i] ?? 0) & FULL_LINE;
+      // Shift the free cells under each filled cell of the piece row.
+      for (let mask = piece.rowMasks[i] ?? 0, k = 0; mask !== 0; k++) {
+        if (mask & 1) fits &= free >>> k;
+        mask >>>= 1;
+      }
     }
+    if (fits !== 0) return true;
   }
   return false;
 }

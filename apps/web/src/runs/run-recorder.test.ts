@@ -10,7 +10,13 @@ const move = (points: number, lines: number): MoveEvent => ({
   row: 0,
   col: 0,
   lines: (1 << lines) - 1,
-  points,
+  score: {
+    placed: points,
+    lines: 0,
+    multiplier: 1,
+    allClear: 0,
+    total: points,
+  },
   dealt: false,
 });
 

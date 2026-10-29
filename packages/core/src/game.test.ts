@@ -3,6 +3,7 @@ import { BOARD_SIZE } from "./constants";
 import type { GameRules, GameState } from "./game";
 import { DEFAULT_RULES, newGame, placePiece } from "./game";
 import type { Piece } from "./pieces";
+import { SCORING } from "./scoring";
 import { boardFromAscii, pieceById } from "./test-utils";
 
 function onlyPiece(piece: Piece): GameRules {
@@ -50,7 +51,7 @@ describe("placePiece", () => {
     const result = placePiece(state, 1, 4, 4, rules);
     expect(result?.state.tray[1]).toBeNull();
     expect(result?.state.score).toBe(1);
-    expect(result?.event.points).toBe(1);
+    expect(result?.event.score.total).toBe(1);
     expect(state.tray[1]).not.toBeNull();
     expect(state.board.occupancy[4]).toBe(0);
   });
@@ -66,21 +67,47 @@ describe("placePiece", () => {
     expect(state.tray.every((p) => p !== null)).toBe(true);
   });
 
-  it("scores and tracks streaks for line clears", () => {
+  it("scores line clears and builds a combo within the window", () => {
     const start: GameState = {
       ...newGame(1, rules),
       board: boardFromAscii([".#########", ".#########"]),
     };
     const first = placePiece(start, 0, 0, 0, rules);
     expect(first?.event.lines).toBe(0b1);
-    expect(first?.event.points).toBe(1 + 10);
-    expect(first?.state.streak).toBe(1);
+    expect(first?.event.score.total).toBe(1 + 10);
+    expect(first?.state).toMatchObject({ combo: 1, comboMovesLeft: 3 });
 
-    const second = first && placePiece(first.state, 1, 1, 0, rules);
-    expect(second?.state.streak).toBe(2);
+    // Two misses keep the combo alive; the third placement clears for ×2.
+    let state = first?.state;
+    for (const col of [2, 3]) {
+      state = state && placePiece(state, col - 1, 4, col, rules)?.state;
+    }
+    expect(state).toMatchObject({ combo: 1, comboMovesLeft: 1 });
+    const second = state && placePiece(state, 0, 1, 0, rules);
+    expect(second?.event.score.multiplier).toBe(2);
+    expect(second?.event.score.lines).toBe(20);
+    expect(second?.state).toMatchObject({ combo: 2, comboMovesLeft: 3 });
+  });
 
-    const third = second && placePiece(second.state, 2, 5, 5, rules);
-    expect(third?.state.streak).toBe(0);
+  it("ends the combo after the window passes without a clear", () => {
+    let state: GameState | undefined = {
+      ...newGame(1, rules),
+      combo: 2,
+      comboMovesLeft: 2,
+    };
+    state = placePiece(state, 0, 5, 5, rules)?.state;
+    expect(state).toMatchObject({ combo: 2, comboMovesLeft: 1 });
+    state = state && placePiece(state, 1, 6, 6, rules)?.state;
+    expect(state).toMatchObject({ combo: 0, comboMovesLeft: 0 });
+  });
+
+  it("awards the all-clear bonus when a move empties the board", () => {
+    const start: GameState = {
+      ...newGame(1, rules),
+      board: boardFromAscii([".#########"]),
+    };
+    const result = placePiece(start, 0, 0, 0, rules);
+    expect(result?.event.score.allClear).toBe(SCORING.allClear);
   });
 
   it("ends the game when no tray piece fits", () => {

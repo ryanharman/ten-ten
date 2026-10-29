@@ -1,0 +1,12 @@
+/* The button keeps the row's height steady as the combo meter comes and goes. */
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.help {
+  composes: pill from "../styles/shared.module.css";
+  margin-inline-start: auto;
+}

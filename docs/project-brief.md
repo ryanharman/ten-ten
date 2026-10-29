@@ -5,7 +5,7 @@
 > architecture, tooling or an open question below. If code and this doc disagree,
 > the doc is wrong and must be fixed (or the code is, and the decision gets logged).
 
-Last updated: 2026-10-04
+Last updated: 2026-10-29
 
 ---
 
@@ -18,8 +18,8 @@ columns can clear simultaneously. The game ends when no offered piece can be
 placed.
 
 - Blocks come in **varying sizes and shapes**, each with **differing colours**.
-- **Scoring is TBD** — but the gameplay loop must be designed with a pluggable
-  scoring step from day one (see §4).
+- **Scoring** rewards multi-line clears, combos and clearing the board (§4b);
+  it is a pluggable step, so the model can change without touching the rules.
 - **Name is a working title.** "ten-ten" / "1010!" already exist; a rename is
   expected. Keep the name out of code identifiers where practical (use a single
   config constant / package scope) so renaming is cheap.
@@ -62,14 +62,18 @@ Design requirements for the loop (implemented in `packages/core`):
   its input. Randomness comes from a seedable PRNG (mulberry32) whose state
   lives in `GameState.rngState`, so games are replayable from a seed.
 - **Scoring as a strategy.** `GameRules.scoring` is a `ScoringRule`:
-  `(ScoringEvent) → points`, where the event carries `cellsPlaced`,
-  `rowsCleared`, `colsCleared` and `streak` (consecutive clearing moves).
-  Current placeholder `classicScoring`: 1 pt/cell + 10 × n(n+1)/2 for n lines.
-- **Rules as data.** `GameRules` = `{ deck (pieces + weights), traySize, scoring }`;
-  `DEFAULT_RULES` is the classic game. Tuning doesn't touch engine code.
+  `(ScoringEvent) → MoveScore`, where the event carries `cellsPlaced`,
+  `rowsCleared`, `colsCleared`, `combo` and `boardCleared`, and `MoveScore`
+  splits the points (`placed`, `lines`, `multiplier`, `allClear`, `total`) so
+  the UI can explain them. Default `comboScoring`, see §4b.
+- **Rules as data.** `GameRules` = `{ deck (pieces + weights), traySize,
+  scoring, comboWindow, assist }`; `DEFAULT_RULES` is the game as shipped.
+  Tuning doesn't touch engine code.
+- **Assisted dealing** (`deal.ts`, `GameRules.assist`): deals look at the
+  board, see §4b.
 - **Move events drive presentation.** `MoveEvent` reports the piece, position,
-  cleared lines, points and whether a new tray was dealt, for UI animation,
-  sound and haptics.
+  cleared lines, the `MoveScore` and whether a new tray was dealt, for UI
+  animation, sound and haptics.
 
 ### Engine internals (performance)
 
@@ -80,8 +84,14 @@ Design requirements for the loop (implemented in `packages/core`):
   AND of all rows.
 - **Drag hot paths are allocation-free:** `canPlace` and `previewLines`
   (returns a packed `LineMask` number: bits 0–9 rows, 10–19 cols).
+- `canPlaceAnywhere` tests a whole row of columns at once: for each piece
+  row, the board row's free cells are shifted under each filled cell and
+  ANDed, leaving a bit per column where the piece fits.
 - Benchmarks (`pnpm bench`, Apple Silicon, includes Vitest getter overhead):
-  `previewLines` ≈ 1 µs/call; `canPlaceAnywhere` for all 19 pieces ≈ 0.11 ms.
+  `previewLines` ≈ 1 µs/call; `canPlaceAnywhere` for all 19 pieces ≈ 0.012 ms
+  (was 0.11 ms before the row-mask version). An assisted deal on an
+  adversarial half-full board (only 2×2 holes; `deal.bench.ts`) takes
+  p50 ≈ 0.01 ms, p99 ≈ 0.7 ms, worst ≈ 1.3 ms (direct timing, 3,000 seeds).
 
 ## 4a. Rules (confirmed)
 
@@ -92,7 +102,63 @@ Design requirements for the loop (implemented in `packages/core`):
 - **Game over** when none of the remaining dealt pieces fits anywhere.
 - **Piece set:** classic ~19 shapes — lines of 1–5 (horizontal & vertical),
   2×2 and 3×3 squares, small and large L/corner shapes in all orientations.
-  Distribution/weighting TBD (tuning item).
+  Base weights are uniform; dealing is assisted while the board has room
+  (§4b).
+
+## 4b. Dealing & scoring
+
+**Assisted dealing.** A purely random deal often hands the player a tray that
+can't all be placed even with perfect play, on a board that is only about half
+full. In simulation (200 games each, a greedy "smart" bot and a "casual" bot),
+**53–57 % of game overs came from such a tray**, typically at ~55 % fill.
+While the board is at most `maxFill` (70) cells full, the dealer
+(`dealTray` in `packages/core/src/deal.ts`):
+
+1. down-weights pieces that don't fit anywhere right now (`misfitWeight` 0.25);
+2. draws a tray and checks with `canPlaceAll` that all its pieces can be
+   placed in some order, counting lines cleared along the way; if not, it
+   re-draws (up to `attempts`, 8), the last draw only from pieces that fit now;
+3. bounds the work: the solver may try `searchBudget` (600) candidate
+   placements per deal, across attempts, then accepts the current tray.
+   Prunes keep proofs cheap: pieces that don't fit yet need a line cleared by
+   the others, so if those have fewer squares than the emptiest line has gaps,
+   or the one other piece can only be placed without clearing, the tray is
+   rejected at once.
+
+Above 70 cells, deals are purely random: a very full board is allowed to end
+the game. Deals stay deterministic (same RNG stream), so seeds still replay.
+
+| Simulated (200 games/bot) | Random deals | Assisted |
+|---|---|---|
+| Game overs from an unplaceable tray (smart / casual bot) | 53 % / 57 % | 4 % / 10 % |
+| Median moves per game (smart / casual) | 215 / 79 | 458 / 146 |
+| Deal time in play, desktop (p99.9 / max) | — | ~0.3–0.9 ms / ~1.3 ms |
+
+The remaining unplaceable-tray game overs are above 70 % fill or where the
+budget ran out. Other game overs are the player's: a placement order existed.
+The bots and harness lived in a scratch directory and are not committed (see
+Q9).
+
+**Scoring (`comboScoring`, values in `SCORING`):**
+
+| Behaviour | Points |
+|---|---|
+| Place blocks | 1 per square |
+| Clear lines | 10 × n² for n lines in one move: 10, 40, 90, 160 |
+| Combo | Clear again within `comboWindow` (3) placements of the last clear: line points × combo count, capped at ×5 |
+| All clear | +300 when a move leaves the board empty |
+
+Rationale, from simulation: ~35 % of moves clear a line, but 94–98 % of those
+clear just one, so n² makes setting up multi-line clears worth a lot. A strict
+"clear every move" streak rarely passes 2 with 3-piece trays; a 3-placement
+window lets combos reach 3–6 with deliberate play, a learnable target. Board
+clears are rare, so the bonus is an aspiration rather than a strategy.
+
+**Explaining it in the app:** a score popup on every clearing move (`+124`,
+with "2 lines · Combo ×3 · All clear +300" as applicable), a combo meter under
+the score (next multiplier, plus a pip per placement left in the window), and
+a "How to score" sheet whose numbers are generated from `SCORING`, so it can't
+drift from the engine.
 
 ## 5. Theming & design system
 
@@ -170,13 +236,21 @@ Key principles:
   click on place, pentatonic run on clear (longer for more lines), falling
   phrase on game over; mute toggle persisted. Haptics via the Vibration API
   (Android only; iOS Safari has none — native haptics come with RN).
+- **Scoring feedback:** `components/score-popup.tsx` (fades in over the
+  board on clears; remounted per clear via `key` and ends transparent, so it
+  never needs a render to hide; motion-free fade under reduced motion),
+  `combo-meter.tsx` and `scoring-help.tsx` (shares `sheet.tsx` with the Runs
+  panel), grouped in `status-bar.tsx` under the header. The popup state is set in the same handler as the move, so a drop
+  still renders once. "Best" sits under the score so 5-digit scores fit at
+  320 px.
 - **Persistence:** `src/storage.ts` wraps localStorage (namespaced `ten-ten:`,
   failure-tolerant). Keys: `session` (game in progress + current run), `runs`
   (history), `best`, `sound`.
 - **Game in progress survives reloads.** `serializeGame` / `deserializeGame`
   in `packages/core` give a versioned, JSON-safe snapshot (colours, tray piece
-  ids, score, streak, RNG state); occupancy and `isOver` are recomputed on
-  load, and anything invalid yields `null` → fresh game. RNG state is saved,
+  ids, score, combo + moves left, RNG state; v2); occupancy and `isOver` are
+  recomputed on load, and anything invalid yields `null` → fresh game. v1
+  saves (strict streak) still load, with the streak as a live combo. RNG state is saved,
   so reloading can't reroll the next pieces. Saves are deferred to idle time
   (`runs/deferred-writer.ts`) and flushed on `pagehide` / hidden, keeping
   storage work off the drop → paint path.
@@ -226,13 +300,13 @@ Target: **any mobile phone**, so we design for low-end Android as the baseline.
 
 **Budgets (enforced):**
 
-| Budget | Limit | Current (2026-10-04) | Enforced by |
+| Budget | Limit | Current (2026-10-29) | Enforced by |
 |---|---|---|---|
-| Shipped JS (gzip, all chunks) | 85 KB | 75.5 KB | `pnpm size` (part of `pnpm check`) |
-| Shipped CSS (gzip) | 4 KB | 2.3 KB | `pnpm size` |
+| Shipped JS (gzip, all chunks) | 85 KB | 79.9 KB | `pnpm size` (part of `pnpm check`) |
+| Shipped CSS (gzip) | 4 KB | 3.1 KB | `pnpm size` |
 | Drag p95 frame time @ 6× CPU slowdown | ≤ 20 ms | 16.8 ms | `pnpm perf` |
 | Longest main-thread task during play @ 6× | ≤ 50 ms | 0 (none) | `pnpm perf` |
-| Drop → next painted frame @ 6× | ≤ 50 ms | ~39 ms (≈ 2 frames) | `pnpm perf` |
+| Drop → next painted frame @ 6× | ≤ 50 ms | ~30–38 ms (≈ 2 frames); 28–35 ms when the drop triggers an assisted deal on an adversarial board | `pnpm perf` |
 
 `pnpm perf` serves the production build, emulates a 390×844 @3x touch phone
 with Chromium CPU throttling (6× ≈ budget Android; 4× = Lighthouse mobile),
@@ -306,14 +380,15 @@ Tooling as configured:
 
 | # | Question | Status |
 |---|---|---|
-| Q1 | Scoring model — placeholder `classicScoring` in place; streak available for combo bonuses | TBD |
-| Q2 | Piece distribution / weighting — currently uniform (weight 1 each) | Open — tune via playtesting |
+| Q1 | Scoring model | Proposed — combo model (§4b); values in `SCORING`, tune via playtesting |
+| Q2 | Piece distribution / weighting — base weights uniform; assisted dealing below 70 % fill (§4b) | Open — tune `DEFAULT_RULES.assist` via playtesting |
 | Q3 | Web E2E test suite — Playwright now a dev dep (used by `pnpm perf`); no E2E tests yet | Open |
 | Q4 | Hosting | Resolved — Cloudflare Workers static assets at `tenten.ryanharman.dev` (§10) |
 | Q5 | Concrete performance budgets | Resolved — see §6b |
 | Q6 | Final name (placeholder "ten-ten" + block icon in use) | Open |
 | Q7 | User-selectable themes, colour-blind palettes | Deferred (post-POC) |
 | Q8 | Charts of per-run performance (score over moves, run comparisons) | Deferred — data already recorded (`RunRecord.samples`) |
+| Q9 | Commit the bot simulation (deal fairness, scoring stats) as a script for tuning? | Open |
 
 ## 10. Delivery
 
@@ -373,3 +448,8 @@ Tooling as configured:
 | 2026-10-04 | Host on Cloudflare Workers static assets at tenten.ryanharman.dev, deployed via Workers Builds | DNS already on Cloudflare; HTTPS for PWA; control over cache headers |
 | 2026-10-04 | Persist game in progress (versioned core snapshot) + run history (last 100, per-move samples); abandoned runs recorded | Progress survives reloads; data ready for charts |
 | 2026-10-04 | Session saves deferred to idle, flushed on page hide | Keep storage off the drop → paint path |
+| 2026-10-29 | Assisted dealing below 70 % fill: re-draw trays that can't all be placed (bounded solver, 600 placements/deal), down-weight pieces that don't fit | Simulation: 53–57 % of game overs were unplaceable trays at ~55 % fill; now 4–10 % |
+| 2026-10-29 | Combo scoring: 1/square, 10 × n² for n lines, ×combo (clear within 3 placements, cap ×5), +300 all clear; `ScoringRule` returns a `MoveScore` breakdown | Rewards multi-line set-ups, sustained clearing and clean boards; breakdown lets the UI explain points |
+| 2026-10-29 | `GameState.streak` replaced by `combo` + `comboMovesLeft`; `SavedGame` v2, v1 still loads | Combo window needs move tracking; keep games in progress across the update |
+| 2026-10-29 | Score popup, combo meter and generated "How to score" sheet | Scoring must be clear in the app; one source of truth for values |
+| 2026-10-29 | `canPlaceAnywhere` tests a row of columns at once with bitmasks | ~9× faster; the deal solver, tray dimming and game-over checks all call it |
