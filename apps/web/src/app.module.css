@@ -46,7 +46,6 @@
 
 /* Size container: the board takes the largest square that fits. */
 .boardArea {
-  position: relative;
   container-type: size;
   flex: 1;
   min-height: 0;
